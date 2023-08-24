@@ -223,7 +223,10 @@ class CRNN(RecognitionModel, nn.Module):
             out["preds"] = self.postprocessor(logits)
 
         if target is not None:
-            out["loss"] = self.compute_loss(logits, target)
+            try:
+                out["loss"] = self.compute_loss(logits, target)
+            except:
+                out["loss"] = self.compute_loss(logits, [""])
 
         return out
 
