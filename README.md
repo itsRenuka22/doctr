@@ -41,3 +41,5 @@ The resulting models is saved in *models* dir outside the main repository
 
 
 # Inference Details
+
+Run ```python scrpts/ihtr_inference.py``` accordingly to get inference on detection models and recogniton models available
