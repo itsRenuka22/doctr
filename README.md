@@ -1,3 +1,7 @@
+## About custom word generator
+- Custom word generator uses a text file with one word on each line and then randomly selects the words to generate synthetic data.
+- To train with custom word generator, pass --words-txt-path argument from command line whilst running train_pytorch.py
+- For example: python train_pytorch crnn_vgg16_bn --words-txt-path <path-to-file> --epochs 100 --train-samples 1000 --val-samples 100 --vocab english
 <p align="center">
   <img src="https://github.com/mindee/doctr/releases/download/v0.3.1/Logo_doctr.gif?raw=True" width="40%">
 </p>
