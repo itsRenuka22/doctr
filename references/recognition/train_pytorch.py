@@ -13,6 +13,8 @@ import logging
 import multiprocessing as mp
 import time
 from pathlib import Path
+from tqdm import tqdm
+import json
 
 import numpy as np
 import torch
@@ -20,20 +22,16 @@ import wandb
 from fastprogress.fastprogress import master_bar, progress_bar
 from torch.optim.lr_scheduler import CosineAnnealingLR, MultiplicativeLR, OneCycleLR
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
-from torchvision.transforms.v2 import (
-    Compose,
-    GaussianBlur,
-    Normalize,
-    RandomGrayscale,
-    RandomPerspective,
-    RandomPhotometricDistort,
-)
-
+from torchvision.transforms import ColorJitter, Compose, Normalize
+import sys
 from doctr import transforms as T
 from doctr.datasets import VOCABS, RecognitionDataset, WordGenerator
 from doctr.models import login_to_hub, push_to_hf_hub, recognition
 from doctr.utils.metrics import TextMatch
 from utils import plot_recorder, plot_samples
+
+import warnings
+warnings.filterwarnings("ignore")
 
 
 def record_lr(
@@ -114,7 +112,8 @@ def fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, m
 
     model.train()
     # Iterate over the batches of the dataset
-    for images, targets in progress_bar(train_loader, parent=mb):
+    for images, targets, *names in progress_bar(train_loader, parent=mb):
+
         if torch.cuda.is_available():
             images = images.cuda()
         images = batch_transforms(images)
@@ -151,7 +150,7 @@ def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
     val_metric.reset()
     # Validation loop
     val_loss, batch_cnt = 0, 0
-    for images, targets in val_loader:
+    for images, targets, names in val_loader:
         if torch.cuda.is_available():
             images = images.cuda()
         images = batch_transforms(images)
@@ -170,6 +169,46 @@ def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
         val_loss += out["loss"].item()
         batch_cnt += 1
 
+    val_loss /= batch_cnt
+    result = val_metric.summary()
+    return val_loss, result["raw"], result["unicase"]
+
+
+@torch.no_grad()
+def evaluateTest(model, val_loader, batch_transforms, val_metric, amp=False):
+    # Model in eval mode
+    model.eval()
+    # Reset val metric
+    val_metric.reset()
+    # Validation loop
+    val_loss, batch_cnt = 0, 0
+    predictions = []
+    for images, targets in tqdm(val_loader):
+        if torch.cuda.is_available():
+            images = images.cuda()
+        images = batch_transforms(images)
+        if amp:
+            with torch.cuda.amp.autocast():
+                out = model(images, targets, return_preds=True)
+        else:
+            out = model(images, targets, return_preds=True)
+            
+        d = {}
+        d['pred'] = out['preds'][0]
+        d['actual'] = targets[0]
+        predictions.append(d)
+        # Compute metric
+        if len(out["preds"]):
+            words, _ = zip(*out["preds"])
+        else:
+            words = []
+        val_metric.update(targets, words)
+
+        val_loss += out["loss"].item()
+        batch_cnt += 1
+
+    with open("results.json", "w") as final:
+        json.dump(predictions, final)
     val_loss /= batch_cnt
     result = val_metric.summary()
     return val_loss, result["raw"], result["unicase"]
@@ -208,6 +247,7 @@ def main(args):
             min_chars=args.min_chars,
             max_chars=args.max_chars,
             num_samples=args.val_samples * len(vocab),
+            words_txt_path=args.words_txt_path,
             font_family=fonts,
             img_transforms=Compose(
                 [
@@ -227,13 +267,14 @@ def main(args):
         pin_memory=torch.cuda.is_available(),
         collate_fn=val_set.collate_fn,
     )
+    print(args.pretrained)
     print(f"Validation set loaded in {time.time() - st:.4}s ({len(val_set)} samples in " f"{len(val_loader)} batches)")
 
     batch_transforms = Normalize(mean=(0.694, 0.695, 0.693), std=(0.299, 0.296, 0.301))
 
     # Load doctr model
     model = recognition.__dict__[args.arch](pretrained=args.pretrained, vocab=vocab)
-
+    
     # Resume weights
     if isinstance(args.resume, str):
         print(f"Resuming {args.resume}")
@@ -260,7 +301,7 @@ def main(args):
 
     if args.test_only:
         print("Running evaluation")
-        val_loss, exact_match, partial_match = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
+        val_loss, exact_match, partial_match = evaluateTest(model, val_loader, batch_transforms, val_metric, amp=args.amp)
         print(f"Validation loss: {val_loss:.6} (Exact: {exact_match:.2%} | Partial: {partial_match:.2%})")
         return
 
@@ -285,12 +326,7 @@ def main(args):
                     T.Resize((args.input_size, 4 * args.input_size), preserve_aspect_ratio=True),
                     # Augmentations
                     T.RandomApply(T.ColorInversion(), 0.1),
-                    RandomGrayscale(p=0.1),
-                    RandomPhotometricDistort(p=0.1),
-                    T.RandomApply(T.RandomShadow(), p=0.4),
-                    T.RandomApply(T.GaussianNoise(mean=0, std=0.1), 0.1),
-                    T.RandomApply(GaussianBlur(3), 0.3),
-                    RandomPerspective(distortion_scale=0.2, p=0.3),
+                    ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.02),
                 ]
             ),
         )
@@ -307,18 +343,14 @@ def main(args):
             min_chars=args.min_chars,
             max_chars=args.max_chars,
             num_samples=args.train_samples * len(vocab),
+            words_txt_path=args.words_txt_path,
             font_family=fonts,
             img_transforms=Compose(
                 [
                     T.Resize((args.input_size, 4 * args.input_size), preserve_aspect_ratio=True),
                     # Ensure we have a 90% split of white-background images
                     T.RandomApply(T.ColorInversion(), 0.9),
-                    RandomGrayscale(p=0.1),
-                    RandomPhotometricDistort(p=0.1),
-                    T.RandomApply(T.RandomShadow(), p=0.4),
-                    T.RandomApply(T.GaussianNoise(mean=0, std=0.1), 0.1),
-                    T.RandomApply(GaussianBlur(3), 0.3),
-                    RandomPerspective(distortion_scale=0.2, p=0.3),
+                    ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.02),
                 ]
             ),
         )
@@ -360,7 +392,7 @@ def main(args):
 
     # Training monitoring
     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    exp_name = f"{args.arch}_{current_time}" if args.name is None else args.name
+    exp_name = f"{args.arch}_{args.vocab}" if args.name is None else args.name
 
     # W&B
     if args.wb:
@@ -395,7 +427,7 @@ def main(args):
         val_loss, exact_match, partial_match = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
         if val_loss < min_loss:
             print(f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state...")
-            torch.save(model.state_dict(), f"./{exp_name}.pt")
+            torch.save(model.state_dict(), f"{exp_name}.pt")
             min_loss = val_loss
         mb.write(
             f"Epoch {epoch + 1}/{args.epochs} - Validation loss: {val_loss:.6} "
@@ -460,6 +492,7 @@ def parse_args():
     parser.add_argument(
         "--show-samples", dest="show_samples", action="store_true", help="Display unormalized training samples"
     )
+    parser.add_argument("--words_txt_path", help="The text file contains the words to prepare dataset from.")
     parser.add_argument("--wb", dest="wb", action="store_true", help="Log to Weights & Biases")
     parser.add_argument("--push-to-hub", dest="push_to_hub", action="store_true", help="Push to Huggingface Hub")
     parser.add_argument(
