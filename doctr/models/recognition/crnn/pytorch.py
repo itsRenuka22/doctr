@@ -17,7 +17,7 @@ from ...classification import mobilenet_v3_large_r, mobilenet_v3_small_r, vgg16_
 from ...utils.pytorch import load_pretrained_params
 from ..core import RecognitionModel, RecognitionPostProcessor
 
-__all__ = ["CRNN", "crnn_vgg16_bn", "crnn_mobilenet_v3_small", "crnn_mobilenet_v3_large"]
+__all__ = ["CRNN", "crnn_vgg16_bn", "crnn_vgg16_bn_bengali", "crnn_vgg16_bn_hindi", "crnn_vgg16_bn_gujarati", "crnn_vgg16_bn_gurumukhi", "crnn_vgg16_bn_kannada", "crnn_vgg16_bn_malayalam", "crnn_vgg16_bn_odia", "crnn_vgg16_bn_tamil", "crnn_vgg16_bn_telugu", "crnn_vgg16_bn_urdu", "crnn_mobilenet_v3_small", "crnn_mobilenet_v3_large", "crnn_vgg16_bn_hinglish"]
 
 default_cfgs: Dict[str, Dict[str, Any]] = {
     "crnn_vgg16_bn": {
@@ -41,6 +41,83 @@ default_cfgs: Dict[str, Dict[str, Any]] = {
         "vocab": VOCABS["french"],
         "url": "https://doctr-static.mindee.com/models?id=v0.3.1/crnn_mobilenet_v3_large_pt-f5259ec2.pt&src=0",
     },
+    "crnn_vgg16_bn_bengali": {
+        "mean": (0.694, 0.695, 0.693),
+        "std": (0.299, 0.296, 0.301),
+        "input_shape": (3, 32, 128),
+        "vocab": VOCABS["bengali"],
+        "url": "https://github.com/kasuba-badri-vishal/doctr-badri-iitb/releases/download/model/crnn_vgg16_bn_bengali.pt",
+    },
+    "crnn_vgg16_bn_hindi": {
+        "mean": (0.694, 0.695, 0.693),
+        "std": (0.299, 0.296, 0.301),
+        "input_shape": (3, 32, 128),
+        "vocab": VOCABS["hindi"],
+        "url": "https://github.com/kasuba-badri-vishal/doctr-badri-iitb/releases/download/model2/crnn_vgg16_bn_hindi.pt",
+    },
+    "crnn_vgg16_bn_gujarati": {
+        "mean": (0.694, 0.695, 0.693),
+        "std": (0.299, 0.296, 0.301),
+        "input_shape": (3, 32, 128),
+        "vocab": VOCABS["gujarati"],
+        "url": "https://github.com/kasuba-badri-vishal/doctr-badri-iitb/releases/download/model/crnn_vgg16_bn_gujarati.pt",
+    },
+    "crnn_vgg16_bn_gurumukhi": {
+        "mean": (0.694, 0.695, 0.693),
+        "std": (0.299, 0.296, 0.301),
+        "input_shape": (3, 32, 128),
+        "vocab": VOCABS["gurumukhi"],
+        "url": "https://github.com/kasuba-badri-vishal/doctr-badri-iitb/releases/download/model/crnn_vgg16_bn_gurumukhi.pt",
+    },
+    "crnn_vgg16_bn_kannada": {
+        "mean": (0.694, 0.695, 0.693),
+        "std": (0.299, 0.296, 0.301),
+        "input_shape": (3, 32, 128),
+        "vocab": VOCABS["kannada"],
+        "url": "https://github.com/kasuba-badri-vishal/doctr-badri-iitb/releases/download/model/crnn_vgg16_bn_kannada.pt",
+    },
+    "crnn_vgg16_bn_malayalam": {
+        "mean": (0.694, 0.695, 0.693),
+        "std": (0.299, 0.296, 0.301),
+        "input_shape": (3, 32, 128),
+        "vocab": VOCABS["malayalam"],
+        "url": "https://github.com/kasuba-badri-vishal/doctr-badri-iitb/releases/download/model/crnn_vgg16_bn_malayalam.pt",
+    },
+    "crnn_vgg16_bn_odia": {
+        "mean": (0.694, 0.695, 0.693),
+        "std": (0.299, 0.296, 0.301),
+        "input_shape": (3, 32, 128),
+        "vocab": VOCABS["odia"],
+        "url": "https://github.com/kasuba-badri-vishal/doctr-badri-iitb/releases/download/model/crnn_vgg16_bn_odia.pt",
+    },
+    "crnn_vgg16_bn_tamil": {
+        "mean": (0.694, 0.695, 0.693),
+        "std": (0.299, 0.296, 0.301),
+        "input_shape": (3, 32, 128),
+        "vocab": VOCABS["tamil"],
+        "url": "https://github.com/kasuba-badri-vishal/doctr-badri-iitb/releases/download/model/crnn_vgg16_bn_tamil.pt",
+    },
+    "crnn_vgg16_bn_telugu": {
+        "mean": (0.694, 0.695, 0.693),
+        "std": (0.299, 0.296, 0.301),
+        "input_shape": (3, 32, 128),
+        "vocab": VOCABS["telugu"],
+        "url": "https://github.com/kasuba-badri-vishal/doctr-badri-iitb/releases/download/model/crnn_vgg16_bn_telugu.pt",
+    },
+    "crnn_vgg16_bn_urdu": {
+        "mean": (0.694, 0.695, 0.693),
+        "std": (0.299, 0.296, 0.301),
+        "input_shape": (3, 32, 128),
+        "vocab": VOCABS["urdu"],
+        "url": "https://github.com/kasuba-badri-vishal/doctr-badri-iitb/releases/download/model/crnn_vgg16_bn_urdu.pt",
+    },
+    "crnn_vgg16_bn_hinglish": {
+        "mean": (0.694, 0.695, 0.693),
+        "std": (0.299, 0.296, 0.301),
+        "input_shape": (3, 32, 128),
+        "vocab": VOCABS["hinglish"],
+        "url": "https://github.com/iitb-research-code/doctr/releases/download/weights/english-hindi-multiplefonts.pt",
+    }
 }
 
 
@@ -55,7 +132,7 @@ class CTCPostProcessor(RecognitionPostProcessor):
     @staticmethod
     def ctc_best_path(
         logits: torch.Tensor,
-        vocab: str = VOCABS["french"],
+        vocab: str = VOCABS["hinglish"],
         blank: int = 0,
     ) -> List[Tuple[str, float]]:
         """Implements best path decoding as shown by Graves (Dissertation, p63), highly inspired from
@@ -232,7 +309,7 @@ def _crnn(
     arch: str,
     pretrained: bool,
     backbone_fn: Callable[[Any], nn.Module],
-    pretrained_backbone: bool = True,
+    pretrained_backbone: bool = False,
     ignore_keys: Optional[List[str]] = None,
     **kwargs: Any,
 ) -> CRNN:
@@ -279,7 +356,54 @@ def crnn_vgg16_bn(pretrained: bool = False, **kwargs: Any) -> CRNN:
 
     return _crnn("crnn_vgg16_bn", pretrained, vgg16_bn_r, ignore_keys=["linear.weight", "linear.bias"], **kwargs)
 
+def crnn_vgg16_bn_hindi(pretrained: bool = False, **kwargs: Any) -> CRNN:
+    """CRNN with a VGG-16 backbone as described in `"An End-to-End Trainable Neural Network for Image-based
+    Sequence Recognition and Its Application to Scene Text Recognition" <https://arxiv.org/pdf/1507.05717.pdf>`_.
 
+    >>> import torch
+    >>> from doctr.models import crnn_vgg16_bn_hindi
+    >>> model = crnn_vgg16_bn_hindi(pretrained=True)
+    >>> input_tensor = torch.rand(1, 3, 32, 128)
+    >>> out = model(input_tensor)
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on our text recognition dataset
+
+    Returns:
+        text recognition architecture
+    """
+
+    return _crnn("crnn_vgg16_bn_hindi", pretrained, vgg16_bn_r, ignore_keys=["linear.weight", "linear.bias"], **kwargs)
+
+def crnn_vgg16_bn_bengali(pretrained: bool = False, **kwargs: Any) -> CRNN:
+    return _crnn("crnn_vgg16_bn_bengali", pretrained, vgg16_bn_r, ignore_keys=["linear.weight", "linear.bias"], **kwargs)
+
+def crnn_vgg16_bn_gujarati(pretrained: bool = False, **kwargs: Any) -> CRNN:
+    return _crnn("crnn_vgg16_bn_gujarati", pretrained, vgg16_bn_r, ignore_keys=["linear.weight", "linear.bias"], **kwargs)
+
+def crnn_vgg16_bn_gurumukhi(pretrained: bool = False, **kwargs: Any) -> CRNN:
+    return _crnn("crnn_vgg16_bn_gurumukhi", pretrained, vgg16_bn_r, ignore_keys=["linear.weight", "linear.bias"], **kwargs)
+
+def crnn_vgg16_bn_kannada(pretrained: bool = False, **kwargs: Any) -> CRNN:
+    return _crnn("crnn_vgg16_bn_kannada", pretrained, vgg16_bn_r, ignore_keys=["linear.weight", "linear.bias"], **kwargs)
+
+def crnn_vgg16_bn_malayalam(pretrained: bool = False, **kwargs: Any) -> CRNN:
+    return _crnn("crnn_vgg16_bn_malayalam", pretrained, vgg16_bn_r, ignore_keys=["linear.weight", "linear.bias"], **kwargs)
+
+def crnn_vgg16_bn_odia(pretrained: bool = False, **kwargs: Any) -> CRNN:
+    return _crnn("crnn_vgg16_bn_odia", pretrained, vgg16_bn_r, ignore_keys=["linear.weight", "linear.bias"], **kwargs)
+
+def crnn_vgg16_bn_tamil(pretrained: bool = False, **kwargs: Any) -> CRNN:
+    return _crnn("crnn_vgg16_bn_tamil", pretrained, vgg16_bn_r, ignore_keys=["linear.weight", "linear.bias"], **kwargs)
+
+def crnn_vgg16_bn_telugu(pretrained: bool = False, **kwargs: Any) -> CRNN:
+    return _crnn("crnn_vgg16_bn_telugu", pretrained, vgg16_bn_r, ignore_keys=["linear.weight", "linear.bias"], **kwargs)
+
+def crnn_vgg16_bn_urdu(pretrained: bool = False, **kwargs: Any) -> CRNN:
+    return _crnn("crnn_vgg16_bn_urdu", pretrained, vgg16_bn_r, ignore_keys=["linear.weight", "linear.bias"], **kwargs)
+
+def crnn_vgg16_bn_hinglish(pretrained: bool = False, **kwargs: Any) -> CRNN:
+    return _crnn("crnn_vgg16_bn_hinglish", pretrained, vgg16_bn_r, pretrained_backbone=False, ignore_keys=["linear.weight", "linear.bias"], **kwargs)
 def crnn_mobilenet_v3_small(pretrained: bool = False, **kwargs: Any) -> CRNN:
     """CRNN with a MobileNet V3 Small backbone as described in `"An End-to-End Trainable Neural Network for Image-based
     Sequence Recognition and Its Application to Scene Text Recognition" <https://arxiv.org/pdf/1507.05717.pdf>`_.
