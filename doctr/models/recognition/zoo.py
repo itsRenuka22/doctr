@@ -14,17 +14,7 @@ from .predictor import RecognitionPredictor
 __all__ = ["recognition_predictor"]
 
 
-ARCHS: List[str] = [
-    "crnn_vgg16_bn",
-    "crnn_mobilenet_v3_small",
-    "crnn_mobilenet_v3_large",
-    "sar_resnet31",
-    "master",
-    "vitstr_small",
-    "vitstr_base",
-    "parseq",
-]
-
+ARCHS: List[str] = ["crnn_vgg16_bn", "crnn_vgg16_bn_hindi", "crnn_mobilenet_v3_small", "crnn_mobilenet_v3_large", "sar_resnet31", "master", "crnn_vgg16_bn_bengali", "crnn_vgg16_bn_gujarati", "crnn_vgg16_bn_gurumukhi", "crnn_vgg16_bn_kannada", "crnn_vgg16_bn_malayalam", "crnn_vgg16_bn_odia", "crnn_vgg16_bn_tamil", "crnn_vgg16_bn_telugu", "crnn_vgg16_bn_urdu","crnn_vgg16_bn_hinglish"]
 
 def _predictor(arch: Any, pretrained: bool, **kwargs: Any) -> RecognitionPredictor:
     if isinstance(arch, str):
@@ -35,9 +25,7 @@ def _predictor(arch: Any, pretrained: bool, **kwargs: Any) -> RecognitionPredict
             pretrained=pretrained, pretrained_backbone=kwargs.get("pretrained_backbone", True)
         )
     else:
-        if not isinstance(
-            arch, (recognition.CRNN, recognition.SAR, recognition.MASTER, recognition.ViTSTR, recognition.PARSeq)
-        ):
+        if not isinstance(arch, (recognition.CRNN, recognition.SAR, recognition.MASTER, recognition.ViTSTR)):
             raise ValueError(f"unknown architecture: {type(arch)}")
         _model = arch
 
