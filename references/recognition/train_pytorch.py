@@ -151,7 +151,7 @@ def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
     val_metric.reset()
     # Validation loop
     val_loss, batch_cnt = 0, 0
-    for images, targets, names in val_loader:
+    for images, targets, *names in val_loader:
         if torch.cuda.is_available():
             images = images.cuda()
         images = batch_transforms(images)
