@@ -19,7 +19,7 @@ def _predictor(
     pretrained: bool,
     pretrained_backbone: bool = True,
     assume_straight_pages: bool = True,
-    preserve_aspect_ratio: bool = True,
+    preserve_aspect_ratio: bool = False,
     symmetric_pad: bool = True,
     det_bs: int = 2,
     reco_bs: int = 128,
@@ -40,10 +40,7 @@ def _predictor(
 
     # Recognition
     reco_predictor = recognition_predictor(
-        reco_arch,
-        pretrained=pretrained,
-        pretrained_backbone=pretrained_backbone,
-        batch_size=reco_bs,
+        reco_arch, pretrained=pretrained, pretrained_backbone=pretrained_backbone, batch_size=reco_bs
     )
 
     return OCRPredictor(
@@ -64,7 +61,7 @@ def ocr_predictor(
     pretrained: bool = False,
     pretrained_backbone: bool = True,
     assume_straight_pages: bool = True,
-    preserve_aspect_ratio: bool = True,
+    preserve_aspect_ratio: bool = False,
     symmetric_pad: bool = True,
     export_as_straight_boxes: bool = False,
     detect_orientation: bool = False,
@@ -124,7 +121,7 @@ def _kie_predictor(
     pretrained: bool,
     pretrained_backbone: bool = True,
     assume_straight_pages: bool = True,
-    preserve_aspect_ratio: bool = True,
+    preserve_aspect_ratio: bool = False,
     symmetric_pad: bool = True,
     det_bs: int = 2,
     reco_bs: int = 128,
@@ -145,10 +142,7 @@ def _kie_predictor(
 
     # Recognition
     reco_predictor = recognition_predictor(
-        reco_arch,
-        pretrained=pretrained,
-        pretrained_backbone=pretrained_backbone,
-        batch_size=reco_bs,
+        reco_arch, pretrained=pretrained, pretrained_backbone=pretrained_backbone, batch_size=reco_bs
     )
 
     return KIEPredictor(
@@ -169,7 +163,7 @@ def kie_predictor(
     pretrained: bool = False,
     pretrained_backbone: bool = True,
     assume_straight_pages: bool = True,
-    preserve_aspect_ratio: bool = True,
+    preserve_aspect_ratio: bool = False,
     symmetric_pad: bool = True,
     export_as_straight_boxes: bool = False,
     detect_orientation: bool = False,
