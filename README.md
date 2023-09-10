@@ -2,7 +2,7 @@
 - Clone this branch using git clone --branch Generic https://github.com/iitb-research-code/doctr
 - Add path to project folder containing doctr folder in PROJECT_FOLDER on line 5 of /references/recognition/train_pytorch.py
 - Install dependencies using pip install -r requirements.txt
-- For training from scratch: python references/recognition/train_pytorch.py crnn_vgg16_bn_generic --words_txt_path ./data/english_hindi_Compliant_plus.txt --epochs <int: num epochs> --train-samples <int: num_training_samples> --val-samples <int: num_validation_samples> --name <str: model_name> --font <str: list of font file paths (comma separated, without space), can find in ./data/fonts_list.txt>
+- For training from scratch: python references/recognition/train_pytorch.py crnn_vgg16_bn_generic --words_txt_path <str: file path of source txt file> --epochs <int: num epochs> --train-samples <int: num_training_samples> --val-samples <int: num_validation_samples> --name <str: model_name> --font <str: list of font file paths (comma separated, without space)>
 - For training from checkpoint: add --resume <str: checkpoint_path>
 - Specify arguments in angular brackets (<>) as per need
 - Python 3.8.10 is used
