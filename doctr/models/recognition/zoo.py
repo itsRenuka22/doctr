@@ -14,7 +14,7 @@ from .predictor import RecognitionPredictor
 __all__ = ["recognition_predictor"]
 
 
-ARCHS: List[str] = ["crnn_vgg16_bn", "crnn_vgg16_bn_hindi", "crnn_mobilenet_v3_small", "crnn_mobilenet_v3_large", "sar_resnet31", "master", "crnn_vgg16_bn_bengali", "crnn_vgg16_bn_gujarati", "crnn_vgg16_bn_gurumukhi", "crnn_vgg16_bn_kannada", "crnn_vgg16_bn_malayalam", "crnn_vgg16_bn_odia", "crnn_vgg16_bn_tamil", "crnn_vgg16_bn_telugu", "crnn_vgg16_bn_urdu","crnn_vgg16_bn_hinglish"]
+ARCHS: List[str] = ["crnn_vgg16_bn", "crnn_vgg16_bn_hindi", "crnn_mobilenet_v3_small", "crnn_mobilenet_v3_large", "sar_resnet31", "master", "crnn_vgg16_bn_bengali", "crnn_vgg16_bn_gujarati", "crnn_vgg16_bn_gurumukhi", "crnn_vgg16_bn_kannada", "crnn_vgg16_bn_malayalam", "crnn_vgg16_bn_odia", "crnn_vgg16_bn_tamil", "crnn_vgg16_bn_telugu", "crnn_vgg16_bn_urdu","crnn_vgg16_bn_hinglish", "crnn_vgg16_bn_generic"]
 
 def _predictor(arch: Any, pretrained: bool, **kwargs: Any) -> RecognitionPredictor:
     if isinstance(arch, str):
@@ -30,10 +30,10 @@ def _predictor(arch: Any, pretrained: bool, **kwargs: Any) -> RecognitionPredict
         _model = arch
 
     kwargs.pop("pretrained_backbone", None)
-
     kwargs["mean"] = kwargs.get("mean", _model.cfg["mean"])
     kwargs["std"] = kwargs.get("std", _model.cfg["std"])
     kwargs["batch_size"] = kwargs.get("batch_size", 32)
+    
     input_shape = _model.cfg["input_shape"][:2] if is_tf_available() else _model.cfg["input_shape"][-2:]
     predictor = RecognitionPredictor(PreProcessor(input_shape, preserve_aspect_ratio=True, **kwargs), _model)
 
