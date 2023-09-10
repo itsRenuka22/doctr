@@ -12,12 +12,12 @@ from torch import nn
 from torch.nn import functional as F
 
 from doctr.datasets import VOCABS, decode_sequence
-
+from data.vocab_generation import GetVocab
 from ...classification import mobilenet_v3_large_r, mobilenet_v3_small_r, vgg16_bn_r
 from ...utils.pytorch import load_pretrained_params
 from ..core import RecognitionModel, RecognitionPostProcessor
 
-__all__ = ["CRNN", "crnn_vgg16_bn", "crnn_vgg16_bn_bengali", "crnn_vgg16_bn_hindi", "crnn_vgg16_bn_gujarati", "crnn_vgg16_bn_gurumukhi", "crnn_vgg16_bn_kannada", "crnn_vgg16_bn_malayalam", "crnn_vgg16_bn_odia", "crnn_vgg16_bn_tamil", "crnn_vgg16_bn_telugu", "crnn_vgg16_bn_urdu", "crnn_mobilenet_v3_small", "crnn_mobilenet_v3_large", "crnn_vgg16_bn_hinglish"]
+__all__ = ["CRNN", "crnn_vgg16_bn", "crnn_vgg16_bn_bengali", "crnn_vgg16_bn_hindi", "crnn_vgg16_bn_gujarati", "crnn_vgg16_bn_gurumukhi", "crnn_vgg16_bn_kannada", "crnn_vgg16_bn_malayalam", "crnn_vgg16_bn_odia", "crnn_vgg16_bn_tamil", "crnn_vgg16_bn_telugu", "crnn_vgg16_bn_urdu", "crnn_mobilenet_v3_small", "crnn_mobilenet_v3_large", "crnn_vgg16_bn_hinglish", "crnn_vgg16_bn_generic"]
 
 default_cfgs: Dict[str, Dict[str, Any]] = {
     "crnn_vgg16_bn": {
@@ -117,6 +117,13 @@ default_cfgs: Dict[str, Dict[str, Any]] = {
         "input_shape": (3, 32, 128),
         "vocab": VOCABS["hinglish"],
         "url": "https://github.com/iitb-research-code/doctr/releases/download/weights/english-hindi-multiplefonts.pt",
+    },
+    "crnn_vgg16_bn_generic": {
+        "mean": (0.694, 0.695, 0.693),
+        "std": (0.299, 0.296, 0.301),
+        "input_shape": (3, 32, 128),
+        "vocab": VOCABS["generic"],
+        "url": "",
     }
 }
 
@@ -317,7 +324,7 @@ def _crnn(
 
     # Feature extractor
     feat_extractor = backbone_fn(pretrained=pretrained_backbone).features  # type: ignore[call-arg]
-
+    # print(kwargs.get("vocab"))
     kwargs["vocab"] = kwargs.get("vocab", default_cfgs[arch]["vocab"])
     kwargs["input_shape"] = kwargs.get("input_shape", default_cfgs[arch]["input_shape"])
 
@@ -401,6 +408,9 @@ def crnn_vgg16_bn_telugu(pretrained: bool = False, **kwargs: Any) -> CRNN:
 
 def crnn_vgg16_bn_urdu(pretrained: bool = False, **kwargs: Any) -> CRNN:
     return _crnn("crnn_vgg16_bn_urdu", pretrained, vgg16_bn_r, ignore_keys=["linear.weight", "linear.bias"], **kwargs)
+
+def crnn_vgg16_bn_generic(pretrained: bool = False, **kwargs: Any) -> CRNN:
+    return _crnn("crnn_vgg16_bn_generic", pretrained, vgg16_bn_r, ignore_keys=["linear.weight", "linear.bias"], **kwargs)
 
 def crnn_vgg16_bn_hinglish(pretrained: bool = False, **kwargs: Any) -> CRNN:
     return _crnn("crnn_vgg16_bn_hinglish", pretrained, vgg16_bn_r, pretrained_backbone=False, ignore_keys=["linear.weight", "linear.bias"], **kwargs)
