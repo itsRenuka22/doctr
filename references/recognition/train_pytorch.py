@@ -2,7 +2,7 @@
 
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
-PROJECT_PATH = "/home/kunal/Dev/IITB/clones/english-hindi-doctr"
+PROJECT_PATH = "/home/kunal/Dev/IITB/clones/generic"
 import os
 
 os.environ["USE_TORCH"] = "1"
@@ -29,6 +29,7 @@ from doctr import transforms as T
 from doctr.datasets import VOCABS, RecognitionDataset, WordGenerator
 from doctr.models import login_to_hub, push_to_hf_hub, recognition
 from doctr.utils.metrics import TextMatch
+from data.vocab_generation import GetVocab
 from utils import plot_recorder, plot_samples
 
 import warnings
@@ -225,8 +226,10 @@ def main(args):
         args.workers = min(16, mp.cpu_count())
 
     torch.backends.cudnn.benchmark = True
-
-    vocab = VOCABS[args.vocab]
+    if(args.vocab=="generic"):
+            vocab = GetVocab(args.words_txt_path)
+    else:
+        vocab = VOCABS[args.vocab]
     fonts = args.font.split(",")
 
     # Load val data generator
@@ -274,6 +277,7 @@ def main(args):
     batch_transforms = Normalize(mean=(0.694, 0.695, 0.693), std=(0.299, 0.296, 0.301))
 
     # Load doctr model
+    # print(recognition.__dict__)
     model = recognition.__dict__[args.arch](pretrained=args.pretrained, vocab=vocab)
     
     # Resume weights
@@ -488,7 +492,7 @@ def parse_args():
     parser.add_argument("--wd", "--weight-decay", default=0, type=float, help="weight decay", dest="weight_decay")
     parser.add_argument("-j", "--workers", type=int, default=None, help="number of workers used for dataloading")
     parser.add_argument("--resume", type=str, default=None, help="Path to your checkpoint")
-    parser.add_argument("--vocab", type=str, default="french", help="Vocab to be used for training")
+    parser.add_argument("--vocab", type=str, default="generic", help="Vocab to be used for training")
     parser.add_argument("--test-only", dest="test_only", action="store_true", help="Run the validation loop")
     parser.add_argument(
         "--show-samples", dest="show_samples", action="store_true", help="Display unormalized training samples"
