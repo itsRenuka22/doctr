@@ -5,7 +5,8 @@
 
 import string
 from typing import Dict
-
+import os
+from data.vocab_generation import GetVocab
 __all__ = ["VOCABS"]
 
 
@@ -67,12 +68,9 @@ VOCABS["vietnamese"] = (
     + "áàảạãăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệóòỏõọôốồổộỗơớờởợỡúùủũụưứừửữựiíìỉĩịýỳỷỹỵ"
     + "ÁÀẢẠÃĂẮẰẲẴẶÂẤẦẨẪẬÉÈẺẼẸÊẾỀỂỄỆÓÒỎÕỌÔỐỒỔỘỖƠỚỜỞỢỠÚÙỦŨỤƯỨỪỬỮỰIÍÌỈĨỊÝỲỶỸỴ"
 )
-VOCABS["hinglish"] = (
-    VOCABS["hindi"]
-    + VOCABS["english"]
-)
+VOCABS["hinglish"] = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~£°ँंःअआइईउऊऋऌऍएऐऑओऔकखगघङचछजझञटठडढणतथदधनऩपफबभमयरऱलळवशषसह़ऽािीुूृॄॅेैॉोौ्॒॑॓क़ख़ग़ज़ड़ढ़फ़य़ॠॢ।॥०१३४५६९॰ "
 VOCABS["transliterated"] = (
     VOCABS["english"]
     + VOCABS["sanskrit_transliterated"]
     )
-print(VOCABS["hinglish"])
+print(len(VOCABS["hinglish"]))
