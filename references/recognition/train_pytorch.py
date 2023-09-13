@@ -248,7 +248,7 @@ def main(args):
             min_chars=args.min_chars,
             max_chars=args.max_chars,
             num_samples=args.val_samples * len(vocab),
-            words_txt_path=args.words_txt_path,
+            words_txt_path=args.val_txt_path if(isinstance(args.val_txt_path, str)) else args.words_txt_path,
             font_family=fonts,
             img_transforms=Compose(
                 [
@@ -344,7 +344,7 @@ def main(args):
             min_chars=args.min_chars,
             max_chars=args.max_chars,
             num_samples=args.train_samples * len(vocab),
-            words_txt_path=args.words_txt_path,
+            words_txt_path=args.train_txt_path if isinstance(args.train_txt_path, str) else args.words_txt_path,
             font_family=fonts,
             img_transforms=Compose(
                 [
@@ -354,8 +354,7 @@ def main(args):
                     ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.02),
                 ]
             ),
-        )
-
+        )        
     train_loader = DataLoader(
         train_set,
         batch_size=args.batch_size,
@@ -494,6 +493,8 @@ def parse_args():
         "--show-samples", dest="show_samples", action="store_true", help="Display unormalized training samples"
     )
     parser.add_argument("--words_txt_path", help="The text file contains the words to prepare dataset from.")
+    parser.add_argument("--train_txt_path", help="The text file contains the words to prepare training dataset from")
+    parser.add_argument("--val_txt_path", help="The text file contains the words to prepare validation dataset from")
     parser.add_argument("--wb", dest="wb", action="store_true", help="Log to Weights & Biases")
     parser.add_argument("--push-to-hub", dest="push_to_hub", action="store_true", help="Push to Huggingface Hub")
     parser.add_argument(
