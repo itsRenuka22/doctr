@@ -116,7 +116,7 @@ default_cfgs: Dict[str, Dict[str, Any]] = {
         "std": (0.299, 0.296, 0.301),
         "input_shape": (3, 32, 128),
         "vocab": VOCABS["hinglish"],
-        "url": "https://github.com/iitb-research-code/doctr/releases/download/weights/english-hindi-multiplefonts.pt",
+        "url": "https://github.com/iitb-research-code/doctr/releases/download/weights/hinglish.pt",
     }
 }
 
