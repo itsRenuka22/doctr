@@ -230,6 +230,8 @@ def main(args):
             vocab = GetVocab(args.words_txt_path)
     else:
         vocab = VOCABS[args.vocab]
+    with open(os.path.join("./data", "Vocabs",f"{args.arch}_{args.vocab}" if args.name is None else args.name + ".txt"), "w") as f:
+        f.write(vocab)
     fonts = args.font.split(",")
 
     # Load val data generator
