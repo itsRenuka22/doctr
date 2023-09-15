@@ -1,7 +1,11 @@
 import random
 import os
+import sys
 if __name__=="__main__":
-    filename = "data/english_hindi_Compliant_plus.txt"
+    if len(sys.argv) < 2:
+        print("Usage: python split_dataset.py <filename>")
+        sys.exit(1)
+    filename = sys.argv[1]
     if(os.path.isfile(filename)):
         with open(filename) as f:
             words = f.read().split("\n")
