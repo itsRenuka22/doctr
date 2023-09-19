@@ -18,7 +18,7 @@ def get_unique_characters(file_path):
     return "".join(result)
 
 
-def create_json_files(data_dir):
+def create_json_files(data_dir, dev_tel=False):
     vocab_df = pd.read_csv(os.path.join(data_dir, 'vocab.txt'), sep=" ", names=["label"])
     vocab_df['index'] = vocab_df.index
 
@@ -26,12 +26,13 @@ def create_json_files(data_dir):
     for sets in typesets:
         
         file_loc = os.path.join(data_dir, sets)
-        data_df = pd.read_csv(file_loc + '.txt', sep=" ", names=["image_path", "index"])
+        data_df = pd.read_csv(file_loc + '.txt', sep=" ", names=["image_path", "label"])
         
-        data_df['image_path'] = data_df['image_path'].apply(lambda x: x.split('/')[-1][:-1])
-
-        
-        result_df = pd.merge(data_df, vocab_df, on='index', how='left')
+        if(dev_tel):
+            result_df = data_df
+        else:
+            data_df['image_path'] = data_df['image_path'].apply(lambda x: x.split('/')[-1][:-1])
+            result_df = pd.merge(data_df, vocab_df, on='index', how='left')
 
         data = dict(zip(result_df.image_path, result_df.label))
         
@@ -50,11 +51,12 @@ def get_vocab(data_dir):
 def parse_args():
     parser = argparse.ArgumentParser(description="Documents OCR Input Arguments", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-i", "--data_dir", type=str, default=None, help="path to the input folder")
+    parser.add_argument("-d", "--dev_tel", action="store_true", help="Use this flag if the dataset is devanagari_telugu")
     
     args = parser.parse_args()
     return args
 
 if __name__ == "__main__":
     args = parse_args()
-    create_json_files(args.data_dir)
+    create_json_files(args.data_dir, dev_tel=args.dev_tel)
     get_vocab(args.data_dir)
