@@ -14,7 +14,7 @@ def GetVocab(filename):
         print("File {} does not exist".format(filename))
         sys.exit(1)
     unique_chars = "".join(sorted(list(get_unique_chars_from_file(filename))))    
-    # print("Unique characters in file {} are :\n {}".format(filename, unique_chars))
+    print("Unique characters in file {} are :\n {}".format(filename, unique_chars))
     return unique_chars
 # print(GetVocab("/home/kunal/Dev/IITB/clones/generic/data/english_hindi_Compliant_plus.txt"))
 # print(GetVocab("/home/kunal/Dev/IITB/clones/generic/data/english_hindi_Compliant_plus.txt"))
