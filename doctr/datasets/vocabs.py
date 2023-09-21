@@ -73,4 +73,3 @@ VOCABS["transliterated"] = (
     VOCABS["english"]
     + VOCABS["sanskrit_transliterated"]
     )
-print(len(VOCABS["hinglish"]))
