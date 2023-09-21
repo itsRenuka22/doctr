@@ -12,7 +12,12 @@
 - Vocab is generated automatically by ./data/vocab_generation.py from txt file
 - If --vocab parameter is passed as generic, or not invoked at all, the automatic vocab generation will be called
 - After training, model will be saved in ./references/recognition/ as per --name argument
+- After training, generated vocab will be saved in ./data/Vocabs as per model name.
 - Model architecture is defined in configs as "crnn_vgg16_bn_generic"
+
+## Instructions for inference:
+- Run command python scripts/inference.py --input_file <str: path to input image> --rec_model <str: path to saved recognition model weights to use for inference> --vocab_file <str: path to generated vocab file for trained model (saved in data / Vocabs) > --output <str: output_filename.json>
+- For example: python inference.py --input_file /inference/samples/english_hindi_document1.jpg --rec_model ./../test.pt --vocab_file ./data/Vocabs/test.txt --output test_output.json
 ## Changes made by me:
 - Created crnn_vgg16_bn_generic model in ./doctr/models/recognition/crnn/pytorch.py by adding configuration and wrapper function and adding model to ./doctr/models/recognition/zoo.py
 - Altered ./references/recognition/train_pytorch.py to invoke automated vocab generation if --vocab is set to generic or not provided
