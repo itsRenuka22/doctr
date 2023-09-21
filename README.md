@@ -21,3 +21,4 @@
 ## Changes made by me:
 - Created crnn_vgg16_bn_generic model in ./doctr/models/recognition/crnn/pytorch.py by adding configuration and wrapper function and adding model to ./doctr/models/recognition/zoo.py
 - Altered ./references/recognition/train_pytorch.py to invoke automated vocab generation if --vocab is set to generic or not provided
+- Adapted inference code from indic branch to work with generic model inference
