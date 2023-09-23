@@ -3,7 +3,7 @@ import json
 import torch
 import argparse
 import sys
-sys.path.append("./..")
+sys.path.append(".")
 from doctr.io import DocumentFile
 from doctr.models import crnn_vgg16_bn_generic
 from doctr.models.recognition.predictor import RecognitionPredictor
@@ -28,14 +28,17 @@ def get_result(args):
     reco_model = crnn_vgg16_bn_generic(pretrained=False, vocab=vocab)
     reco_param = torch.load(args.rec_model, map_location="cuda")
     reco_model.load_state_dict(reco_param)
-    reco_predictor = RecognitionPredictor(PreProcessor((32, 128), preserve_aspect_ratio=True, batch_size=1, mean=(0.694, 0.695, 0.693), std=(0.299, 0.296, 0.301)), reco_model)        
-
-
-
-    result = reco_predictor(doc)[0][0]
+    reco_predictor = RecognitionPredictor(PreProcessor((32, 128), preserve_aspect_ratio=True, batch_size=1, mean=(0.694, 0.695, 0.693), std=(0.299, 0.296, 0.301)), reco_model)  
+    result = reco_predictor(doc)[0][0]  
+    if(isinstance(args.output, str)):            
+        with open(args.output, "w") as f:
+            print(f"Output saved at {args.output}")
+            f.write(result)
+    else:
+        print("Valid output argument not provided (--output); Output not saved")
+    return reco_predictor(doc)[0][0]
     
-    
-    
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Documents OCR Input Arguments", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-i", "--input_file", type=str, default=None, help="path to the input folder")
@@ -49,4 +52,4 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    get_result(args)
+    print(f"Output: {get_result(args)}")
