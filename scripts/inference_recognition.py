@@ -22,6 +22,7 @@ def get_result(args):
             vocab = f.read()
     else:
         print("Please enter valid vocab file path (--vocab_file path/to/file)")
+        return
 
 
     #Recognition model
