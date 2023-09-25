@@ -1,6 +1,5 @@
 ## To train generic model for any given source txt file containing line separated-words:
 - Clone this branch using git clone --branch Generic https://github.com/iitb-research-code/doctr
-- Add path to project folder containing doctr folder in PROJECT_FOLDER on line 5 of /references/recognition/train_pytorch.py
 - Install dependencies using ```pip install -r requirements.txt```
 - Run the following to split dataset: ```python ./data/split_dataset.py <str: path to txt file>```
 - For training from scratch: 
