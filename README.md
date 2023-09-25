@@ -15,7 +15,7 @@ python references/recognition/train_pytorch.py crnn_vgg16_bn_generic --words_txt
 - If --vocab parameter is passed as generic, or not invoked at all, the automatic vocab generation will be called
 - After training, model will be saved in ./references/recognition/ as per --name argument
 - After training, generated vocab will be saved in ./data/Vocabs as per model name.
-- Model architecture is defined in configs as "crnn_vgg16_bn_generic"
+- Model architecture is defined in configs as "crnn_vgg16_bn_generic" or "parseq_generic"
 
 ## Instructions for inference:
 - Run command python scripts/inference_recognition.py --input_file <str: path to input image> --rec_model <str: path to saved recognition model weights to use for inference> --vocab_file <str: path to generated vocab file for trained model (saved in data / Vocabs) > --output <str: output_filename.json>
