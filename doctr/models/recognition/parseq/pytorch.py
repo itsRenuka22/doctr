@@ -21,7 +21,7 @@ from ...classification import vit_s
 from ...utils.pytorch import load_pretrained_params
 from .base import _PARSeq, _PARSeqPostProcessor
 
-__all__ = ["PARSeq", "parseq"]
+__all__ = ["PARSeq", "parseq", "parseq_generic"]
 
 default_cfgs: Dict[str, Dict[str, Any]] = {
     "parseq": {
@@ -31,6 +31,13 @@ default_cfgs: Dict[str, Dict[str, Any]] = {
         "vocab": VOCABS["french"],
         "url": None,
     },
+    "parseq_generic": {
+        "mean": (0.694, 0.695, 0.693),
+        "std": (0.299, 0.296, 0.301),
+        "input_shape": (3, 32, 128),
+        "vocab": VOCABS["generic"],
+        "url": None,
+    }
 }
 
 
@@ -465,6 +472,17 @@ def parseq(pretrained: bool = False, **kwargs: Any) -> PARSeq:
 
     return _parseq(
         "parseq",
+        pretrained,
+        vit_s,
+        "1",
+        embedding_units=384,
+        patch_size=(4, 8),
+        ignore_keys=["embed.embedding.weight", "head.weight", "head.bias"],
+        **kwargs,
+    )
+def parseq_generic(pretrained: bool = False, **kwargs: Any) -> PARSeq:
+    return _parseq(
+        "parseq_generic",
         pretrained,
         vit_s,
         "1",
