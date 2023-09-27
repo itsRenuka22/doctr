@@ -4,18 +4,24 @@
 - Run the following to split dataset: ```python ./data/split_dataset.py <str: path to txt file>```
 - For training from scratch: 
 ```
-python references/recognition/train_pytorch.py crnn_vgg16_bn_generic --words_txt_path <str: path to txt source file> --train_txt_path <str: path to train txt file generated using split_dataset.py> --val_txt_path <str: path to val txt file generated using split_dataset.py> --epochs <int: num epochs> --train-samples <int: num_training_samples> --val-samples <int: num_validation_samples> --name <str: model_name> --font <str: list of font file paths (comma separated, without space)>
+python references/recognition/train_pytorch.py <str: model name, see section below for reference> --words_txt_path <str: path to txt source file> --train_txt_path <str: path to train txt file generated using split_dataset.py> --val_txt_path <str: path to val txt file generated using split_dataset.py> --epochs <int: num epochs> --train-samples <int: num_training_samples> --val-samples <int: num_validation_samples> --name <str: model_name> --font <str: list of font file paths (comma separated, without space)>
 ```
 - For training from checkpoint: add --resume <str: checkpoint_path>
 - Specify arguments in angular brackets (<>) as per need
 - Python 3.8.10 is used
+
+## Model names:
+- crnn_vgg16_bn -> crnn_vgg16_bn_generic
+- parseq -> parseq_generic
+- vitstr_small -> vitstr_small_generic
+- vitstr_base -> vitstr_base_generic
 ## Quick points about pipeline:
 - Branched from English-Hindi
 - Vocab is generated automatically by ./data/vocab_generation.py from txt file
 - If --vocab parameter is passed as generic, or not invoked at all, the automatic vocab generation will be called
 - After training, model will be saved in ./references/recognition/ as per --name argument
 - After training, generated vocab will be saved in ./data/Vocabs as per model name.
-- Model architecture is defined in configs as "crnn_vgg16_bn_generic" or "parseq_generic"
+- If you have multiple word corpora to combine into single text file: python ./data/merge_txt.py --input_filenames path/to/file1,path/to/file2,..path/to/filen --output_file path/to/output_file
 
 ## Instructions for inference:
 - Run command python scripts/inference_recognition.py --input_file <str: path to input image> --rec_model <str: path to saved recognition model weights to use for inference> --vocab_file <str: path to generated vocab file for trained model (saved in data / Vocabs) > --output <str: output_filename.json>
