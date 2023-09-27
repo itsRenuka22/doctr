@@ -17,7 +17,7 @@ from ...classification import vit_b, vit_s
 from ...utils.pytorch import load_pretrained_params
 from .base import _ViTSTR, _ViTSTRPostProcessor
 
-__all__ = ["ViTSTR", "vitstr_small", "vitstr_base"]
+__all__ = ["ViTSTR", "vitstr_small", "vitstr_base", "vitstr_small_generic", "vitstr_base_generic"]
 
 default_cfgs: Dict[str, Dict[str, Any]] = {
     "vitstr_small": {
@@ -27,11 +27,25 @@ default_cfgs: Dict[str, Dict[str, Any]] = {
         "vocab": VOCABS["french"],
         "url": None,
     },
+    "vitstr_small_generic": {
+        "mean": (0.694, 0.695, 0.693),
+        "std": (0.299, 0.296, 0.301),
+        "input_shape": (3, 32, 128),
+        "vocab": VOCABS["generic"],
+        "url": None,
+    },
     "vitstr_base": {
         "mean": (0.694, 0.695, 0.693),
         "std": (0.299, 0.296, 0.301),
         "input_shape": (3, 32, 128),
         "vocab": VOCABS["french"],
+        "url": None,
+    },
+    "vitstr_base_generic": {
+        "mean": (0.694, 0.695, 0.693),
+        "std": (0.299, 0.296, 0.301),
+        "input_shape": (3, 32, 128),
+        "vocab": VOCABS["generic"],
         "url": None,
     },
 }
@@ -240,6 +254,34 @@ def vitstr_small(pretrained: bool = False, **kwargs: Any) -> ViTSTR:
         **kwargs,
     )
 
+def vitstr_small_generic(pretrained: bool = False, **kwargs: Any) -> ViTSTR:
+    """ViTSTR-Small as described in `"Vision Transformer for Fast and Efficient Scene Text Recognition"
+    <https://arxiv.org/pdf/2105.08582.pdf>`_.
+    Generalized version works with synthetic data from txt source file with auto generated vocab
+
+    >>> import torch
+    >>> from doctr.models import vitstr_small
+    >>> model = vitstr_small(pretrained=False)
+    >>> input_tensor = torch.rand((1, 3, 32, 128))
+    >>> out = model(input_tensor)
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on our text recognition dataset
+
+    Returns:
+        text recognition architecture
+    """
+
+    return _vitstr(
+        "vitstr_small_generic",
+        pretrained,
+        vit_s,
+        "1",
+        embedding_units=384,
+        patch_size=(4, 8),
+        ignore_keys=["head.weight", "head.bias"],
+        **kwargs,
+    )
 
 def vitstr_base(pretrained: bool = False, **kwargs: Any) -> ViTSTR:
     """ViTSTR-Base as described in `"Vision Transformer for Fast and Efficient Scene Text Recognition"
@@ -260,6 +302,33 @@ def vitstr_base(pretrained: bool = False, **kwargs: Any) -> ViTSTR:
 
     return _vitstr(
         "vitstr_base",
+        pretrained,
+        vit_b,
+        "1",
+        embedding_units=768,
+        patch_size=(4, 8),
+        ignore_keys=["head.weight", "head.bias"],
+        **kwargs,
+    )
+def vitstr_base_generic(pretrained: bool = False, **kwargs: Any) -> ViTSTR:
+    """ViTSTR-Base as described in `"Vision Transformer for Fast and Efficient Scene Text Recognition"
+    <https://arxiv.org/pdf/2105.08582.pdf>`_.
+
+    >>> import torch
+    >>> from doctr.models import vitstr_base
+    >>> model = vitstr_base(pretrained=False)
+    >>> input_tensor = torch.rand((1, 3, 32, 128))
+    >>> out = model(input_tensor)
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on our text recognition dataset
+
+    Returns:
+        text recognition architecture
+    """
+
+    return _vitstr(
+        "vitstr_base_generic",
         pretrained,
         vit_b,
         "1",
