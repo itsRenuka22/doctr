@@ -8,7 +8,7 @@ def parse_args():
     """Argument parser
 
     Returns:
-        argparse.Namespace _description_
+        argparse.Namespace 
     """
     parser = argparse.ArgumentParser(description="Documents OCR Input Arguments", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--input_filenames", type=str, default=None, help="comma separated filenames")
