@@ -5,12 +5,6 @@ from doctr.datasets import VOCABS
 filename="HindiEnglishWordsCorpus.txt" #input file name which contains list of words
 
 corpusString = open(filename, "r", encoding="utf-8").read()
-
-#vocabs = "".join(list(set(corpus)))
-
-#print("vocabs: ", vocabs)
-
-
 vocabString=VOCABS["hinglish"]
 
 vocab=x=[i for i in vocabString]
