@@ -2,6 +2,14 @@ import sys
 import os
 
 def get_unique_chars_from_file(filename):
+    """Reads input file line by line and generates a set of unique characters from file
+
+    Args:
+        filename (str): Input words txt file path to generate vocab from
+
+    Returns:
+        set: A set of unique characters
+    """
     with open(filename, 'r') as f:
         lines = f.readlines()
     unique_chars = set()
@@ -10,21 +18,17 @@ def get_unique_chars_from_file(filename):
     return unique_chars
 
 def GetVocab(filename):
+    """Generates the vocabulary from given filename by calling get_unique_chars_from_file.
+
+    Args:
+        filename (str): Input words txt file path to generate vocab from
+
+    Returns:
+        str: generated vocab as a string
+    """
     if not os.path.exists(filename):
         print("File {} does not exist".format(filename))
         sys.exit(1)
     unique_chars = "".join(sorted(list(get_unique_chars_from_file(filename))))    
     print("Unique characters in file {} are :\n {}".format(filename, unique_chars))
     return unique_chars
-# print(GetVocab("/home/kunal/Dev/IITB/clones/generic/data/english_hindi_Compliant_plus.txt"))
-# print(GetVocab("/home/kunal/Dev/IITB/clones/generic/data/english_hindi_Compliant_plus.txt"))
-# if __name__ == '__main__':
-#     if len(sys.argv) < 2:
-#         print("Usage: python vocab_generation.py <filename>")
-#         sys.exit(1)
-#     filename = sys.argv[1]
-#     if not os.path.exists(filename):
-#         print("File {} does not exist".format(filename))
-#         sys.exit(1)
-#     unique_chars = sorted(list(get_unique_chars_from_file(filename)))    
-#     print("Unique characters in file {} are :\n {}".format(filename, unique_chars))
