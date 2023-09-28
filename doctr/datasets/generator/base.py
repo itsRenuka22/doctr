@@ -38,8 +38,9 @@ def synthesize_text_img(
     text_color = (255, 255, 255) if text_color is None else text_color
 
     font = get_font(font_family, font_size)
-    left, top, right, bottom = font.getbbox(text)
-    text_w, text_h = right - left, bottom - top
+    # left, top, right, bottom = font.getbbox(text)
+    # text_w, text_h = right - left, bottom - top
+    text_w, text_h = font.getsize(text)
     h, w = int(round(1.3 * text_h)), int(round(1.1 * text_w))
     # If single letter, make the image square, otherwise expand to meet the text size
     img_size = (h, w) if len(text) > 1 else (max(h, w), max(h, w))
@@ -108,6 +109,7 @@ class _WordGenerator(AbstractDataset):
         min_chars: int,
         max_chars: int,
         num_samples: int,
+        words_txt_path: Optional[str] = None,
         cache_samples: bool = False,
         font_family: Optional[Union[str, List[str]]] = None,
         img_transforms: Optional[Callable[[Any], Any]] = None,
@@ -126,6 +128,7 @@ class _WordGenerator(AbstractDataset):
                     raise ValueError(f"unable to locate font: {font}")
         self.img_transforms = img_transforms
         self.sample_transforms = sample_transforms
+        self.words_txt_path = words_txt_path
 
         self._data: List[Image.Image] = []
         if cache_samples:
@@ -135,8 +138,16 @@ class _WordGenerator(AbstractDataset):
             ]
 
     def _generate_string(self, min_chars: int, max_chars: int) -> str:
-        num_chars = random.randint(min_chars, max_chars)
-        return "".join(random.choice(self.vocab) for _ in range(num_chars))
+        # num_chars = random.randint(min_chars, max_chars)
+        # return "".join(random.choice(self.vocab) for _ in range(num_chars))
+        if self.words_txt_path:
+            words_list = open(self.words_txt_path, "r", encoding="utf-8").readlines()  
+            word=""         
+            while True:
+                word = random.choice(words_list).rstrip("\n")
+                if(len(word)<max_chars):
+                    break
+            return word
 
     def __len__(self) -> int:
         return self._num_samples

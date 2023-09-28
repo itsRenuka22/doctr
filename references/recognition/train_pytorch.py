@@ -20,6 +20,7 @@ import wandb
 from fastprogress.fastprogress import master_bar, progress_bar
 from torch.optim.lr_scheduler import CosineAnnealingLR, MultiplicativeLR, OneCycleLR
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
+from torchvision.transforms import ColorJitter
 from torchvision.transforms.v2 import (
     Compose,
     GaussianBlur,
@@ -187,7 +188,8 @@ def main(args):
     torch.backends.cudnn.benchmark = True
 
     vocab = VOCABS[args.vocab]
-    fonts = args.font.split(",")
+    font_files = os.listdir(args.font)
+    fonts = [args.font + element for element in font_files]
 
     # Load val data generator
     st = time.time()
@@ -208,6 +210,7 @@ def main(args):
             min_chars=args.min_chars,
             max_chars=args.max_chars,
             num_samples=args.val_samples * len(vocab),
+            words_txt_path = args.val_txt_path,
             font_family=fonts,
             img_transforms=Compose(
                 [
@@ -285,12 +288,13 @@ def main(args):
                     T.Resize((args.input_size, 4 * args.input_size), preserve_aspect_ratio=True),
                     # Augmentations
                     T.RandomApply(T.ColorInversion(), 0.1),
-                    RandomGrayscale(p=0.1),
-                    RandomPhotometricDistort(p=0.1),
-                    T.RandomApply(T.RandomShadow(), p=0.4),
-                    T.RandomApply(T.GaussianNoise(mean=0, std=0.1), 0.1),
-                    T.RandomApply(GaussianBlur(3), 0.3),
-                    RandomPerspective(distortion_scale=0.2, p=0.3),
+                    ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.02),
+                    # RandomGrayscale(p=0.1),
+                    # RandomPhotometricDistort(p=0.1),
+                    # T.RandomApply(T.RandomShadow(), p=0.4),
+                    # T.RandomApply(T.GaussianNoise(mean=0, std=0.1), 0.1),
+                    # T.RandomApply(GaussianBlur(3), 0.3),
+                    # RandomPerspective(distortion_scale=0.2, p=0.3),
                 ]
             ),
         )
@@ -307,18 +311,20 @@ def main(args):
             min_chars=args.min_chars,
             max_chars=args.max_chars,
             num_samples=args.train_samples * len(vocab),
+            words_txt_path=args.train_txt_path,
             font_family=fonts,
             img_transforms=Compose(
                 [
                     T.Resize((args.input_size, 4 * args.input_size), preserve_aspect_ratio=True),
                     # Ensure we have a 90% split of white-background images
                     T.RandomApply(T.ColorInversion(), 0.9),
-                    RandomGrayscale(p=0.1),
-                    RandomPhotometricDistort(p=0.1),
-                    T.RandomApply(T.RandomShadow(), p=0.4),
-                    T.RandomApply(T.GaussianNoise(mean=0, std=0.1), 0.1),
-                    T.RandomApply(GaussianBlur(3), 0.3),
-                    RandomPerspective(distortion_scale=0.2, p=0.3),
+                    ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.02),
+                    # RandomGrayscale(p=0.1),
+                    # RandomPhotometricDistort(p=0.1),
+                    # T.RandomApply(T.RandomShadow(), p=0.4),
+                    # T.RandomApply(T.GaussianNoise(mean=0, std=0.1), 0.1),
+                    # T.RandomApply(GaussianBlur(3), 0.3),
+                    # RandomPerspective(distortion_scale=0.2, p=0.3),
                 ]
             ),
         )
@@ -400,7 +406,7 @@ def main(args):
         val_loss, exact_match, partial_match = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
         if val_loss < min_loss:
             print(f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state...")
-            torch.save(model.state_dict(), f"./{exp_name}.pt")
+            torch.save(model.state_dict(), f"./../models/{exp_name}.pt")
             min_loss = val_loss
         mb.write(
             f"Epoch {epoch + 1}/{args.epochs} - Validation loss: {val_loss:.6} "
@@ -432,6 +438,8 @@ def parse_args():
     )
 
     parser.add_argument("arch", type=str, help="text-recognition model to train")
+    parser.add_argument("--train_txt_path", help="The text file contains the words to prepare train dataset from.")
+    parser.add_argument("--val_txt_path", help="The text file contains the words to prepare validation dataset from.")
     parser.add_argument("--train_path", type=str, default=None, help="path to train data folder(s)")
     parser.add_argument("--val_path", type=str, default=None, help="path to val data folder")
     parser.add_argument(
