@@ -193,7 +193,7 @@ def main(args):
             + (
                 [
                     T.Resize(args.input_size, preserve_aspect_ratio=True),  # This does not pad
-                    T.RandomRotate(90, expand=True),
+                    T.RandomApply(T.RandomRotate(90, expand=True), 0.5),
                     T.Resize((args.input_size, args.input_size), preserve_aspect_ratio=True, symmetric_pad=True),
                 ]
                 if args.rotation and not args.eval_straight
@@ -286,7 +286,7 @@ def main(args):
             + (
                 [
                     T.Resize(args.input_size, preserve_aspect_ratio=True),
-                    T.RandomRotate(90, expand=True),
+                    T.RandomApply(T.RandomRotate(90, expand=True), 0.5),
                     T.Resize((args.input_size, args.input_size), preserve_aspect_ratio=True, symmetric_pad=True),
                 ]
                 if args.rotation
@@ -317,7 +317,7 @@ def main(args):
     # Backbone freezing
     if args.freeze_backbone:
         for p in model.feat_extractor.parameters():
-            p.reguires_grad_(False)
+            p.requires_grad = False
 
     # Optimizer
     optimizer = torch.optim.Adam(
