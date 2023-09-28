@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import os
-
+import subprocess
 os.environ["USE_TORCH"] = "1"
 
 import datetime
@@ -190,6 +190,14 @@ def main(args):
     vocab = VOCABS[args.vocab]
     font_files = os.listdir(args.font)
     fonts = [args.font + element for element in font_files]
+    
+    command = ["wc",'-l',args.val_txt_path]
+    output = subprocess.check_output(command, text=True, stderr=subprocess.STDOUT)
+    val_words = int(output.split(" ")[0])
+    
+    command = ["wc",'-l',args.train_txt_path]
+    output = subprocess.check_output(command, text=True, stderr=subprocess.STDOUT)
+    train_words = int(output.split(" ")[0])
 
     # Load val data generator
     st = time.time()
@@ -209,7 +217,7 @@ def main(args):
             vocab=vocab,
             min_chars=args.min_chars,
             max_chars=args.max_chars,
-            num_samples=args.val_samples * len(vocab),
+            num_samples=val_words,
             words_txt_path = args.val_txt_path,
             font_family=fonts,
             img_transforms=Compose(
@@ -310,7 +318,7 @@ def main(args):
             vocab=vocab,
             min_chars=args.min_chars,
             max_chars=args.max_chars,
-            num_samples=args.train_samples * len(vocab),
+            num_samples=train_words,
             words_txt_path=args.train_txt_path,
             font_family=fonts,
             img_transforms=Compose(

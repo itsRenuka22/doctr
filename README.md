@@ -21,7 +21,8 @@
 
 1. Download data for the required language from here - [link](https://paperswithcode.com/dataset/indiccorp)
 2. Run the ```code files present in misc_code folder accordingly``` step-by-step according to the suggested execution procedure
-4. Copy the Vocab and create a new dictionary element for the new vocab set in the doctr/datasets/vocabs.py file accordingly
+3. Download the ```Fonts folder``` required to pass as parameter while training from this - [link](https://iitbacin-my.sharepoint.com/:f:/g/personal/22m2119_iitb_ac_in/EtLuy1XMETJPl77rlw3IxJoBZsmPR5wG6DYqOXyuxwCEPQ?e=0X3hPs)
+4. Copy the Vocab and create a new dictionary element for the new vocab set in the ```doctr/datasets/vocabs.py``` file accordingly as the result from the execution of misc_code folder files 
 
 
 ## Training Details
