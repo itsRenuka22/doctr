@@ -2,7 +2,7 @@
 
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
-PROJECT_PATH = "/home/kunal/Dev/IITB/clones/english-hindi-doctr"
+PROJECT_PATH = "."
 import os
 
 os.environ["USE_TORCH"] = "1"
@@ -237,7 +237,7 @@ def main(args):
         base_vocab = VOCABS[args.vocab]
         characters_not_included = set(base_vocab).difference(set(vocab))
         if(len(characters_not_included)>0):
-            print(f"Characters included in base vocabulary of {args.vocab} but generated from {args.words_txt_path} are: {characters_not_included}")
+            print(f"Characters included in base vocabulary of {args.vocab} but not generated from {args.words_txt_path} are: {characters_not_included}")
         else:
             print(f"All characters from base vocab for {args.vocab} are included in generated vocab")
         
