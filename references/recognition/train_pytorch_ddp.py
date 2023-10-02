@@ -2,7 +2,7 @@
 
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
-
+PROJECT_PATH = "."
 import os
 
 os.environ["USE_TORCH"] = "1"
@@ -24,7 +24,8 @@ from torch.optim.lr_scheduler import CosineAnnealingLR, OneCycleLR
 from torch.utils.data import DataLoader, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
 from torchvision.transforms import ColorJitter, Compose, Normalize
-
+import sys
+sys.path.append(PROJECT_PATH)
 from doctr import transforms as T
 from doctr.datasets import VOCABS, RecognitionDataset, WordGenerator
 from doctr.models import login_to_hub, push_to_hf_hub, recognition
