@@ -29,7 +29,8 @@ from doctr import transforms as T
 from doctr.datasets import VOCABS, RecognitionDataset, WordGenerator
 from doctr.models import login_to_hub, push_to_hf_hub, recognition
 from doctr.utils.metrics import TextMatch
-from utils import plot_samples
+from data.Preprocessing.vocab_generation import GetVocab
+from utils import plot_recorder, plot_samples
 
 
 def fit_one_epoch(model, device, train_loader, batch_transforms, optimizer, scheduler, mb, amp=False):
@@ -38,7 +39,7 @@ def fit_one_epoch(model, device, train_loader, batch_transforms, optimizer, sche
 
     model.train()
     # Iterate over the batches of the dataset
-    for images, targets in progress_bar(train_loader, parent=mb):
+    for images, targets, *names in progress_bar(train_loader, parent=mb):
         images = images.to(device)
         images = batch_transforms(images)
 
@@ -74,7 +75,7 @@ def evaluate(model, device, val_loader, batch_transforms, val_metric, amp=False)
     val_metric.reset()
     # Validation loop
     val_loss, batch_cnt = 0, 0
-    for images, targets in val_loader:
+    for images, targets, *names in val_loader:
         images = images.to(device)
         images = batch_transforms(images)
         if amp:
@@ -112,8 +113,21 @@ def main(rank: int, world_size: int, args):
         args.workers = min(16, multiprocessing.cpu_count())
 
     torch.backends.cudnn.benchmark = True
+    if(isinstance(args.words_txt_path, str)):
+        vocab = GetVocab(args.words_txt_path)
+    else:
+        print("Please provide --words_txt_path")
+        sys.exit(1)
 
-    vocab = VOCABS[args.vocab]
+    #Find characters from base vocab not found in the generated vocab
+    if(isinstance(args.vocab, str)):
+        base_vocab = VOCABS[args.vocab]
+        characters_not_included = set(base_vocab).difference(set(vocab))
+        if(len(characters_not_included)>0):
+            print(f"Characters included in base vocabulary of {args.vocab} but generated from {args.words_txt_path} are: {characters_not_included}")
+        else:
+            print(f"All characters from base vocab for {args.vocab} are included in generated vocab")
+        
     fonts = args.font.split(",")
 
     if rank == 0:
@@ -123,28 +137,29 @@ def main(rank: int, world_size: int, args):
             with open(os.path.join(args.val_path, "labels.json"), "rb") as f:
                 val_hash = hashlib.sha256(f.read()).hexdigest()
 
-            val_set = RecognitionDataset(
-                img_folder=os.path.join(args.val_path, "images"),
-                labels_path=os.path.join(args.val_path, "labels.json"),
-                img_transforms=T.Resize((args.input_size, 4 * args.input_size), preserve_aspect_ratio=True),
-            )
-        else:
-            val_hash = None
-            # Load synthetic data generator
-            val_set = WordGenerator(
-                vocab=vocab,
-                min_chars=args.min_chars,
-                max_chars=args.max_chars,
-                num_samples=args.val_samples * len(vocab),
-                font_family=fonts,
-                img_transforms=Compose(
-                    [
-                        T.Resize((args.input_size, 4 * args.input_size), preserve_aspect_ratio=True),
-                        # Ensure we have a 90% split of white-background images
-                        T.RandomApply(T.ColorInversion(), 0.9),
-                    ]
-                ),
-            )
+        val_set = RecognitionDataset(
+            img_folder=os.path.join(args.val_path, "images"),
+            labels_path=os.path.join(args.val_path, "labels.json"),
+            img_transforms=T.Resize((args.input_size, 4 * args.input_size), preserve_aspect_ratio=True),
+        )
+    else:
+        val_hash = None
+        # Load synthetic data generator
+        val_set = WordGenerator(
+            vocab=vocab,
+            min_chars=args.min_chars,
+            max_chars=args.max_chars,
+            num_samples=args.val_samples * len(vocab),
+            words_txt_path=args.val_txt_path if(isinstance(args.val_txt_path, str)) else args.words_txt_path,
+            font_family=fonts,
+            img_transforms=Compose(
+                [
+                    T.Resize((args.input_size, 4 * args.input_size), preserve_aspect_ratio=True),
+                    # Ensure we have a 90% split of white-background images
+                    T.RandomApply(T.ColorInversion(), 0.9),
+                ]
+            ),
+        )
 
         val_loader = DataLoader(
             val_set,
@@ -228,6 +243,7 @@ def main(rank: int, world_size: int, args):
             min_chars=args.min_chars,
             max_chars=args.max_chars,
             num_samples=args.train_samples * len(vocab),
+            words_txt_path=args.train_txt_path if isinstance(args.train_txt_path, str) else args.words_txt_path,
             font_family=fonts,
             img_transforms=Compose(
                 [
@@ -379,6 +395,9 @@ def parse_args():
     parser.add_argument(
         "--show-samples", dest="show_samples", action="store_true", help="Display unormalized training samples"
     )
+    parser.add_argument("--words_txt_path", help="The text file contains the words to prepare dataset from.")
+    parser.add_argument("--train_txt_path", help="The text file contains the words to prepare training dataset from")
+    parser.add_argument("--val_txt_path", help="The text file contains the words to prepare validation dataset from")
     parser.add_argument("--wb", dest="wb", action="store_true", help="Log to Weights & Biases")
     parser.add_argument("--push-to-hub", dest="push_to_hub", action="store_true", help="Push to Huggingface Hub")
     parser.add_argument(
