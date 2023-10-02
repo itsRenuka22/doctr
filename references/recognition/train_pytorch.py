@@ -29,6 +29,7 @@ from doctr import transforms as T
 from doctr.datasets import VOCABS, RecognitionDataset, WordGenerator
 from doctr.models import login_to_hub, push_to_hf_hub, recognition
 from doctr.utils.metrics import TextMatch
+from data.Preprocessing.vocab_generation import GetVocab
 from utils import plot_recorder, plot_samples
 
 import warnings
@@ -225,10 +226,22 @@ def main(args):
         args.workers = min(16, mp.cpu_count())
 
     torch.backends.cudnn.benchmark = True
+    if(isinstance(args.words_txt_path, str)):
+        vocab = GetVocab(args.words_txt_path)
+    else:
+        print("Please provide --words_txt_path")
+        sys.exit(1)
 
-    vocab = VOCABS[args.vocab]
+    #Find characters from base vocab not found in the generated vocab
+    if(isinstance(args.vocab, str)):
+        base_vocab = VOCABS[args.vocab]
+        characters_not_included = set(base_vocab).difference(set(vocab))
+        if(len(characters_not_included)>0):
+            print(f"Characters included in base vocabulary of {args.vocab} but generated from {args.words_txt_path} are: {characters_not_included}")
+        else:
+            print(f"All characters from base vocab for {args.vocab} are included in generated vocab")
+        
     fonts = args.font.split(",")
-
     # Load val data generator
     st = time.time()
     if isinstance(args.val_path, str):
