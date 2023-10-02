@@ -6,7 +6,6 @@
 import string
 from typing import Dict
 import os
-from data.vocab_generation import GetVocab
 __all__ = ["VOCABS"]
 
 
