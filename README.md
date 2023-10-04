@@ -24,6 +24,7 @@
 
 1. Download data for the required language from here - [link](https://cvit.iiit.ac.in/research/projects/cvit-projects/iiit-indic-hw-words)
 2. Run the ```python scripts/iiit_indic_words.py --data_dir PATH_TO_THE_DATA``` to convert the data into trainable format as required for DocTR
+3. For handling data directories for hindi and telugu, execute the other arguments available for ```iiit_indic_words.py``` file
 3. With the above code, vocab is printed in terminal and also the json files are created
 4. Copy the Vocab and create a new dictionary element for the new vocab set in the doctr/datasets/vocabs.py file accordingly
 
