@@ -44,11 +44,11 @@ def create_json_files(data_dir, dev_tel=False, output_dir=None):
             result_df = pd.DataFrame(values, columns=['image_path', 'label'])
             result_df.to_csv(os.path.join(output_dir, sets + '.txt'), index=False, header=False, sep=' ')
             file_loc = os.path.join(output_dir, sets)
-        else:
-            
+        else:   
             vocab_df = pd.read_csv(os.path.join(data_dir, 'vocab.txt'), sep=" ", names=["label"])
             vocab_df['index'] = vocab_df.index
             
+            data_df.columns = ['image_path', 'index']
             data_df['image_path'] = data_df['image_path'].apply(lambda x: x.split('/')[-1][:-1])
             result_df = pd.merge(data_df, vocab_df, on='index', how='left')
 
