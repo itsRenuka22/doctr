@@ -189,7 +189,7 @@ def main(args):
 
     vocab = VOCABS[args.vocab]
     font_files = os.listdir(args.font)
-    fonts = [args.font + element for element in font_files]
+    fonts = [args.font + "/" + element for element in font_files]
     
     command = ["wc",'-l',args.val_txt_path]
     output = subprocess.check_output(command, text=True, stderr=subprocess.STDOUT)
