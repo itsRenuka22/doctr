@@ -7,12 +7,11 @@ import random
 from typing import Any, Callable, List, Optional, Tuple, Union
 
 from PIL import Image, ImageDraw
-
+import os
 from doctr.io.image import tensor_from_pil
 from doctr.utils.fonts import get_font
 
 from ..datasets import AbstractDataset
-
 
 def synthesize_text_img(
     text: str,
@@ -52,6 +51,10 @@ def synthesize_text_img(
     text_pos = (int(round((img_size[1] - text_w) / 2)), int(round((img_size[0] - text_h) / 2)))
     # Draw the text
     d.text(text_pos, text, font=font, fill=text_color)
+    #Save 5 images with little randomisation
+    if random.random()<0.01 and len(os.listdir("samples"))<5:
+        img.save(f"samples/{text}.jpg")
+        print(f"Saving image {text}.jpg as sample")
     return img
 
 
@@ -136,7 +139,7 @@ class _WordGenerator(AbstractDataset):
             self._data = [
                 (synthesize_text_img(text, font_family=random.choice(self.font_family)), text) for text in _words
             ]
-
+        self.counter=0       #count number of images generated; for saving appropriate number of samples
     def _generate_string(self, min_chars: int, max_chars: int) -> str:
         # num_chars = random.randint(min_chars, max_chars)
         # return "".join(random.choice(self.vocab) for _ in range(num_chars))
@@ -159,6 +162,7 @@ class _WordGenerator(AbstractDataset):
         else:
             target = self._generate_string(*self.wordlen_range)
             pil_img = synthesize_text_img(target, font_family=random.choice(self.font_family))
+        self.counter+=1      #increment counter
+        #if counter is divisible by number of samples divided by 5, save the image
         img = tensor_from_pil(pil_img)
-
         return img, target
