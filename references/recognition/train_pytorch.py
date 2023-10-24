@@ -28,7 +28,7 @@ from torchvision.transforms.v2 import (
     RandomPerspective,
     RandomPhotometricDistort,
 )
-
+from tensorboardX import SummaryWriter
 from doctr import transforms as T
 from doctr.datasets import VOCABS, RecognitionDataset, WordGenerator
 from doctr.models import login_to_hub, push_to_hf_hub, recognition
@@ -172,10 +172,12 @@ def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
 
     val_loss /= batch_cnt
     result = val_metric.summary()
-    return val_loss, result["raw"], result["unicase"]
+    return val_loss, result["raw"], result["unicase"], result["cer"]
 
 
 def main(args):
+    #Initialise SummaryWriter instance for logging scalars using tensorboard
+    writer = SummaryWriter("logs")
     print(args)
 
     if args.push_to_hub:
@@ -397,14 +399,20 @@ def main(args):
         fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, mb, amp=args.amp)
 
         # Validation loop at the end of each epoch
-        val_loss, exact_match, partial_match = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
+        val_loss, exact_match, partial_match, cer = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
+        #Log values into tensorboard
+        writer.add_scalar("validation/loss", val_loss, epoch)
+        writer.add_scalar("validation/exact-match", exact_match, epoch)
+        writer.add_scalar("validation/partial-match", partial_match, epoch)
+        writer.add_scalar("validation/cer", cer, epoch)
+
         if val_loss < min_loss:
             print(f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state...")
             torch.save(model.state_dict(), f"./{exp_name}.pt")
             min_loss = val_loss
         mb.write(
             f"Epoch {epoch + 1}/{args.epochs} - Validation loss: {val_loss:.6} "
-            f"(Exact: {exact_match:.2%} | Partial: {partial_match:.2%})"
+            f"(Exact: {exact_match:.2%} | Partial: {partial_match:.2%} | CER: {cer})"
         )
         # W&B
         if args.wb:
