@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from unidecode import unidecode
-
+import Levenshtein
 __all__ = [
     "TextMatch",
     "box_iou",
@@ -22,6 +22,21 @@ __all__ = [
     "DetectionMetric",
 ]
 
+def calculate_cer(reference, generated):
+    """Calculates character error rate
+
+    Args:
+        reference (string): ground truth string
+        generated (string): predicted string
+
+    Returns:
+        float: computed character error rate
+    """
+    reference = reference.lower()
+    generated = generated.lower()
+    cer = Levenshtein.distance(reference, generated) / max(len(reference), len(generated))
+
+    return cer
 
 def string_match(word1: str, word2: str) -> Tuple[bool, bool, bool, bool]:
     """Performs string comparison with multiple levels of tolerance
@@ -32,7 +47,7 @@ def string_match(word1: str, word2: str) -> Tuple[bool, bool, bool, bool]:
 
     Returns:
         a tuple with booleans specifying respectively whether the raw strings, their lower-case counterparts, their
-            unidecode counterparts and their lower-case unidecode counterparts match
+            unidecode counterparts, their lower-case unidecode counterparts match and character error rate
     """
     raw_match = word1 == word2
     caseless_match = word1.lower() == word2.lower()
@@ -40,8 +55,8 @@ def string_match(word1: str, word2: str) -> Tuple[bool, bool, bool, bool]:
 
     # Warning: the order is important here otherwise the pair ("EUR", "€") cannot be matched
     unicase_match = unidecode(word1).lower() == unidecode(word2).lower()
-
-    return raw_match, caseless_match, unidecode_match, unicase_match
+    cer = calculate_cer(word1, word2)
+    return raw_match, caseless_match, unidecode_match, unicase_match, cer
 
 
 class TextMatch:
@@ -92,11 +107,12 @@ class TextMatch:
             raise AssertionError("prediction size does not match with ground-truth labels size")
 
         for gt_word, pred_word in zip(gt, pred):
-            _raw, _caseless, _unidecode, _unicase = string_match(gt_word, pred_word)
+            _raw, _caseless, _unidecode, _unicase, _cer = string_match(gt_word, pred_word)
             self.raw += int(_raw)
             self.caseless += int(_caseless)
             self.unidecode += int(_unidecode)
             self.unicase += int(_unicase)
+            self.cer += int(_cer)
 
         self.total += len(gt)
 
@@ -115,6 +131,7 @@ class TextMatch:
             caseless=self.caseless / self.total,
             unidecode=self.unidecode / self.total,
             unicase=self.unicase / self.total,
+            cer=self.cer/ self.total
         )
 
     def reset(self) -> None:
@@ -123,7 +140,7 @@ class TextMatch:
         self.unidecode = 0
         self.unicase = 0
         self.total = 0
-
+        self.cer = 0
 
 def box_iou(boxes_1: np.ndarray, boxes_2: np.ndarray) -> np.ndarray:
     """Computes the IoU between two sets of bounding boxes
