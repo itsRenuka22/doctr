@@ -402,7 +402,7 @@ def main(args):
         writer.add_scalar("validation/loss", val_loss, epoch)
         writer.add_scalar("validation/exact-match", exact_match, epoch)
         writer.add_scalar("validation/partial-match", partial_match, epoch)
-        writer.add_scalar("validation/cer", cer, epoch+1)
+        writer.add_scalar("validation/cer", cer, epoch)
 
         if val_loss < min_loss:
             print(f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state...")
