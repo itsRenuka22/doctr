@@ -396,7 +396,6 @@ def main(args):
     mb = master_bar(range(args.epochs))
     for epoch in mb:
         fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, mb, amp=args.amp)
-        print(epoch)
         # Validation loop at the end of each epoch
         val_loss, exact_match, partial_match, cer = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
         #Log values into tensorboard
