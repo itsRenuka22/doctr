@@ -13,7 +13,6 @@ import logging
 import multiprocessing as mp
 import time
 from pathlib import Path
-
 import numpy as np
 import torch
 import wandb
@@ -262,8 +261,8 @@ def main(args):
 
     if args.test_only:
         print("Running evaluation")
-        val_loss, exact_match, partial_match = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
-        print(f"Validation loss: {val_loss:.6} (Exact: {exact_match:.2%} | Partial: {partial_match:.2%})")
+        val_loss, exact_match, partial_match, cer = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
+        print(f"Validation loss: {val_loss:.6} (Exact: {exact_match:.2%} | Partial: {partial_match:.2%}) | CER: {cer})")
         return
 
     st = time.time()
@@ -397,14 +396,14 @@ def main(args):
     mb = master_bar(range(args.epochs))
     for epoch in mb:
         fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, mb, amp=args.amp)
-
+        print(epoch)
         # Validation loop at the end of each epoch
         val_loss, exact_match, partial_match, cer = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
         #Log values into tensorboard
         writer.add_scalar("validation/loss", val_loss, epoch)
         writer.add_scalar("validation/exact-match", exact_match, epoch)
         writer.add_scalar("validation/partial-match", partial_match, epoch)
-        writer.add_scalar("validation/cer", cer, epoch)
+        writer.add_scalar("validation/cer", cer, epoch+1)
 
         if val_loss < min_loss:
             print(f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state...")
@@ -423,7 +422,7 @@ def main(args):
                     "partial_match": partial_match,
                 }
             )
-
+    writer.close()
     if args.wb:
         run.finish()
 
