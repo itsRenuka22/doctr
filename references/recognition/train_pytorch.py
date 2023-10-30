@@ -176,7 +176,8 @@ def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
 
 def main(args):
     #Initialise SummaryWriter instance for logging scalars using tensorboard
-    writer = SummaryWriter("logs")
+    if(args.save_logs):
+        writer = SummaryWriter("logs")
     print(args)
 
     if args.push_to_hub:
@@ -399,10 +400,11 @@ def main(args):
         # Validation loop at the end of each epoch
         val_loss, exact_match, partial_match, cer = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
         #Log values into tensorboard
-        writer.add_scalar("validation/loss", val_loss, epoch)
-        writer.add_scalar("validation/exact-match", exact_match, epoch)
-        writer.add_scalar("validation/partial-match", partial_match, epoch)
-        writer.add_scalar("validation/cer", cer, epoch)
+        if((args.save_logs==1) and (epoch%args.save_logs_frequency==0)):
+            writer.add_scalar("validation/loss", val_loss, epoch)
+            writer.add_scalar("validation/exact-match", exact_match, epoch)
+            writer.add_scalar("validation/partial-match", partial_match, epoch)
+            writer.add_scalar("validation/cer", cer, epoch)
 
         if val_loss < min_loss:
             print(f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state...")
@@ -459,6 +461,8 @@ def parse_args():
     parser.add_argument("--max-chars", type=int, default=12, help="Maximum number of characters per synthetic sample")
     parser.add_argument("--name", type=str, default=None, help="Name of your training experiment")
     parser.add_argument("--epochs", type=int, default=10, help="number of epochs to train the model on")
+    parser.add_argument("--save_logs", type=int, default=0, help="1 to save logs; 0 to not save logs using tensorboard")
+    parser.add_argument("--save_logs_frequency", type=int, default=50, help="frequency at which to save logs using tensorboard")
     parser.add_argument("-b", "--batch_size", type=int, default=64, help="batch size for training")
     parser.add_argument("--device", default=None, type=int, help="device")
     parser.add_argument("--input_size", type=int, default=32, help="input size H for the model, W = 4*H")
