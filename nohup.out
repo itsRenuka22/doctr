@@ -1,0 +1,13 @@
+/data/BADRI/RECOGNITION/DOCTR/venv/lib/python3.10/site-packages/torchvision/datapoints/__init__.py:12: UserWarning: The torchvision.datapoints and torchvision.transforms.v2 namespaces are still Beta. While we do not expect major breaking changes, some APIs may still change according to user feedback. Please submit any feedback you may have in this issue: https://github.com/pytorch/vision/issues/6753, and you can also check out https://github.com/pytorch/vision/issues/7319 to learn more about the APIs that we suspect might involve future changes. You can silence this warning by calling torchvision.disable_beta_transforms_warning().
+  warnings.warn(_BETA_TRANSFORMS_WARNING)
+/data/BADRI/RECOGNITION/DOCTR/venv/lib/python3.10/site-packages/torchvision/transforms/v2/__init__.py:54: UserWarning: The torchvision.datapoints and torchvision.transforms.v2 namespaces are still Beta. While we do not expect major breaking changes, some APIs may still change according to user feedback. Please submit any feedback you may have in this issue: https://github.com/pytorch/vision/issues/6753, and you can also check out https://github.com/pytorch/vision/issues/7319 to learn more about the APIs that we suspect might involve future changes. You can silence this warning by calling torchvision.disable_beta_transforms_warning().
+  warnings.warn(_BETA_TRANSFORMS_WARNING)
+Namespace(train_path='/data/BADRI/RECOGNITION/PAGE_LEVEL/merged_data/train/', val_path='/data/BADRI/RECOGNITION/PAGE_LEVEL/merged_data/val/', arch='db_resnet50', name='merged_data', epochs=50, batch_size=8, device=1, input_size=1024, lr=0.001, weight_decay=0, workers=None, resume=None, test_only=False, freeze_backbone=False, show_samples=False, wb=False, push_to_hub=False, pretrained=False, rotation=False, eval_straight=False, sched='cosine', amp=False, find_lr=False)
+Traceback (most recent call last):
+  File "/data/BADRI/RECOGNITION/DOCTR/doctr/references/detection/train_pytorch.py", line 496, in <module>
+    main(args)
+  File "/data/BADRI/RECOGNITION/DOCTR/doctr/references/detection/train_pytorch.py", line 224, in main
+    val_set = DetectionDataset(
+  File "/data/BADRI/RECOGNITION/DOCTR/doctr/doctr/datasets/detection.py", line 51, in __init__
+    raise FileNotFoundError(f"unable to locate {label_path}")
+FileNotFoundError: unable to locate /data/BADRI/RECOGNITION/PAGE_LEVEL/merged_data/val/labels.json

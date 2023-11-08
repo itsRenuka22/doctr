@@ -4,6 +4,11 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import os
+import fastwer
+import pandas as pd
+import warnings
+from tqdm import tqdm
+warnings.filterwarnings("ignore")
 
 os.environ["USE_TORCH"] = "1"
 
@@ -12,21 +17,27 @@ import hashlib
 import logging
 import multiprocessing as mp
 import time
+from pathlib import Path
 
-import pandas as pd
 import numpy as np
-import psutil
 import torch
 import wandb
 from fastprogress.fastprogress import master_bar, progress_bar
 from torch.optim.lr_scheduler import CosineAnnealingLR, MultiplicativeLR, OneCycleLR
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
-from torchvision.transforms.v2 import Compose, GaussianBlur, Normalize, RandomGrayscale, RandomPhotometricDistort
+from torchvision.transforms import (
+    Compose,
+    GaussianBlur,
+    Normalize,
+    RandomGrayscale,
+    RandomPerspective,
+    # RandomPhotometricDistort,
+)
 
 from doctr import transforms as T
-from doctr.datasets import DetectionDataset
-from doctr.models import detection, login_to_hub, push_to_hf_hub
-from doctr.utils.metrics import LocalizationConfusion
+from doctr.datasets import VOCABS, RecognitionDataset, WordGenerator
+from doctr.models import login_to_hub, push_to_hf_hub, recognition
+from doctr.utils.metrics import TextMatch
 from utils import plot_recorder, plot_samples
 
 
@@ -108,10 +119,12 @@ def fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, m
 
     model.train()
     # Iterate over the batches of the dataset
-    for images, targets, name in progress_bar(train_loader, parent=mb):
+    for images, targets in progress_bar(train_loader, parent=mb):
         if torch.cuda.is_available():
             images = images.cuda()
         images = batch_transforms(images)
+
+        train_loss = model(images, targets)["loss"]
 
         optimizer.zero_grad()
         if amp:
@@ -136,15 +149,17 @@ def fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, m
 
 
 @torch.no_grad()
-def evaluate_test(model, val_loader, batch_transforms, val_metric, amp=False):
+def evaluate_test(model, val_loader, batch_transforms, val_metric, out_file, amp=False):
     # Model in eval mode
     model.eval()
     # Reset val metric
     val_metric.reset()
     # Validation loop
-    
     val_loss, batch_cnt = 0, 0
-    for images, targets, name in val_loader:
+    preds, actual = [], []
+    for images, targets in tqdm(val_loader):
+        print(images)
+        exit()
         if torch.cuda.is_available():
             images = images.cuda()
         images = batch_transforms(images)
@@ -154,24 +169,26 @@ def evaluate_test(model, val_loader, batch_transforms, val_metric, amp=False):
         else:
             out = model(images, targets, return_preds=True)
         # Compute metric
-        loc_preds = out["preds"]
-        for target, loc_pred in zip(targets, loc_preds):
-            for boxes_gt, boxes_pred in zip(target.values(), loc_pred.values()):
-                if args.rotation and args.eval_straight:
-                    # Convert pred to boxes [xmin, ymin, xmax, ymax]  N, 4, 2 --> N, 4
-                    boxes_pred = np.concatenate((boxes_pred.min(axis=1), boxes_pred.max(axis=1)), axis=-1)
-                val_metric.update(gts=boxes_gt, preds=boxes_pred[:, :4])
+        if len(out["preds"]):
+            words, _ = zip(*out["preds"])
+        else:
+            words = []
+        val_metric.update(targets, words)
+        
+        preds.append(words[0])
+        actual.append(targets[0])
 
-        df = pd.DataFrame(loc_preds[0]['words'], columns=['x0','y0','x1','y1','rot'])
-        df.to_csv(f'./../results/pred/{name[0][:-4]}.csv', index=False)
         val_loss += out["loss"].item()
         batch_cnt += 1
-        
-        
 
+
+
+    df = pd.DataFrame(list(zip(preds, actual)), columns=['pred', 'actual'])
+    # print(df)
+    df.to_csv('./../results_phd/' + out_file + '.txt', sep=' ', index=False, header=False)
     val_loss /= batch_cnt
-    recall, precision, mean_iou = val_metric.summary()
-    return val_loss, recall, precision, mean_iou
+    result = val_metric.summary()
+    return val_loss, result["raw"], result["unicase"]
 
 
 @torch.no_grad()
@@ -182,7 +199,7 @@ def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
     val_metric.reset()
     # Validation loop
     val_loss, batch_cnt = 0, 0
-    for images, targets, name in val_loader:
+    for images, targets in val_loader:
         if torch.cuda.is_available():
             images = images.cuda()
         images = batch_transforms(images)
@@ -192,24 +209,22 @@ def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
         else:
             out = model(images, targets, return_preds=True)
         # Compute metric
-        loc_preds = out["preds"]
-        for target, loc_pred in zip(targets, loc_preds):
-            for boxes_gt, boxes_pred in zip(target.values(), loc_pred.values()):
-                if args.rotation and args.eval_straight:
-                    # Convert pred to boxes [xmin, ymin, xmax, ymax]  N, 4, 2 --> N, 4
-                    boxes_pred = np.concatenate((boxes_pred.min(axis=1), boxes_pred.max(axis=1)), axis=-1)
-                val_metric.update(gts=boxes_gt, preds=boxes_pred[:, :4])
+        if len(out["preds"]):
+            words, _ = zip(*out["preds"])
+        else:
+            words = []
+        val_metric.update(targets, words)
 
         val_loss += out["loss"].item()
         batch_cnt += 1
 
     val_loss /= batch_cnt
-    recall, precision, mean_iou = val_metric.summary()
-    return val_loss, recall, precision, mean_iou
+    result = val_metric.summary()
+    return val_loss, result["raw"], result["unicase"]
 
 
 def main(args):
-    print(args)
+    # print(args)
 
     if args.push_to_hub:
         login_to_hub()
@@ -218,30 +233,39 @@ def main(args):
         args.workers = min(16, mp.cpu_count())
 
     torch.backends.cudnn.benchmark = True
-    system_available_memory = int(psutil.virtual_memory().available / 1024**3)
 
+    vocab = VOCABS[args.vocab]
+    fonts = args.font.split(",")
+
+    # Load val data generator
     st = time.time()
-    val_set = DetectionDataset(
-        img_folder=os.path.join(args.val_path, "images"),
-        label_path=os.path.join(args.val_path, "labels.json"),
-        sample_transforms=T.SampleCompose(
-            (
-                [T.Resize((args.input_size, args.input_size), preserve_aspect_ratio=True, symmetric_pad=True)]
-                if not args.rotation or args.eval_straight
-                else []
-            )
-            + (
+    if isinstance(args.train_path, str):
+        with open(os.path.join(args.train_path, "labels.json"), "rb") as f:
+            val_hash = hashlib.sha256(f.read()).hexdigest()
+
+        val_set = RecognitionDataset(
+            img_folder=os.path.join(args.train_path, "images/"),
+            labels_path=os.path.join(args.train_path, "labels.json"),
+            img_transforms=T.Resize((args.input_size, 4 * args.input_size), preserve_aspect_ratio=True),
+        )
+    else:
+        val_hash = None
+        # Load synthetic data generator
+        val_set = WordGenerator(
+            vocab=vocab,
+            min_chars=args.min_chars,
+            max_chars=args.max_chars,
+            num_samples=args.val_samples * len(vocab),
+            font_family=fonts,
+            img_transforms=Compose(
                 [
-                    T.Resize(args.input_size, preserve_aspect_ratio=True),  # This does not pad
-                    T.RandomApply(T.RandomRotate(90, expand=True), 0.5),
-                    T.Resize((args.input_size, args.input_size), preserve_aspect_ratio=True, symmetric_pad=True),
+                    T.Resize((args.input_size, 4 * args.input_size), preserve_aspect_ratio=True),
+                    # Ensure we have a 90% split of white-background images
+                    T.RandomApply(T.ColorInversion(), 0.9),
                 ]
-                if args.rotation and not args.eval_straight
-                else []
-            )
-        ),
-        use_polygons=args.rotation and not args.eval_straight,
-    )
+            ),
+        )
+
     val_loader = DataLoader(
         val_set,
         batch_size=args.batch_size,
@@ -251,22 +275,16 @@ def main(args):
         pin_memory=torch.cuda.is_available(),
         collate_fn=val_set.collate_fn,
     )
-    print(f"Validation set loaded in {time.time() - st:.4}s ({len(val_set)} samples in " f"{len(val_loader)} batches)")
-    with open(os.path.join(args.val_path, "labels.json"), "rb") as f:
-        val_hash = hashlib.sha256(f.read()).hexdigest()
+    # print(f"Validation set loaded in {time.time() - st:.4}s ({len(val_set)} samples in " f"{len(val_loader)} batches)")
 
-    batch_transforms = Normalize(mean=(0.798, 0.785, 0.772), std=(0.264, 0.2749, 0.287))
+    batch_transforms = Normalize(mean=(0.694, 0.695, 0.693), std=(0.299, 0.296, 0.301))
 
     # Load doctr model
-    model = detection.__dict__[args.arch](
-        pretrained=args.pretrained,
-        assume_straight_pages=not args.rotation,
-        class_names=val_set.class_names,
-    )
+    model = recognition.__dict__[args.arch](pretrained=args.pretrained, vocab=vocab)
 
     # Resume weights
     if isinstance(args.resume, str):
-        print(f"Resuming {args.resume}")
+        # print(f"Resuming {args.resume}")
         checkpoint = torch.load(args.resume, map_location="cpu")
         model.load_state_dict(checkpoint)
 
@@ -286,55 +304,72 @@ def main(args):
         model = model.cuda()
 
     # Metrics
-    val_metric = LocalizationConfusion(
-        use_polygons=args.rotation and not args.eval_straight,
-        mask_shape=(args.input_size, args.input_size),
-        use_broadcasting=True if system_available_memory > 62 else False,
-    )
+    val_metric = TextMatch()
 
     if args.test_only:
-        print("Running evaluation")
-        val_loss, recall, precision, mean_iou = evaluate_test(model, val_loader, batch_transforms, val_metric, amp=args.amp)
-        print(
-            f"Validation loss: {val_loss:.6} (Recall: {recall:.2%} | Precision: {precision:.2%} | "
-            f"Mean IoU: {mean_iou:.2%})"
-        )
+        # print("Running evaluation")
+        val_loss, exact_match, partial_match = evaluate_test(model, val_loader, batch_transforms, val_metric, args.out_file, amp=args.amp)
+        print(f"Validation loss: {val_loss:.6} (Exact: {exact_match:.2%} | Partial: {partial_match:.2%})")
         return
 
     st = time.time()
-    # Load both train and val data generators
-    train_set = DetectionDataset(
-        img_folder=os.path.join(args.train_path, "images"),
-        label_path=os.path.join(args.train_path, "labels.json"),
-        img_transforms=Compose(
-            [
-                # Augmentations
-                T.RandomApply(T.ColorInversion(), 0.1),
-                T.RandomApply(T.GaussianNoise(mean=0.1, std=0.1), 0.1),
-                T.RandomApply(T.RandomShadow(), 0.4),
-                T.RandomApply(GaussianBlur(kernel_size=3), 0.3),
-                RandomPhotometricDistort(p=0.1),
-                RandomGrayscale(p=0.1),
-            ]
-        ),
-        sample_transforms=T.SampleCompose(
-            (
-                [T.Resize((args.input_size, args.input_size), preserve_aspect_ratio=True, symmetric_pad=True)]
-                if not args.rotation
-                else []
-            )
-            + (
+
+    if isinstance(args.train_path, str):
+        # Load train data generator
+        base_path = Path(args.train_path)
+        parts = (
+            [base_path]
+            if base_path.joinpath("train.json").is_file()
+            else [base_path.joinpath(sub) for sub in os.listdir(base_path)]
+        )
+        with open(parts[0].joinpath("train.json"), "rb") as f:
+            train_hash = hashlib.sha256(f.read()).hexdigest()
+
+        train_set = RecognitionDataset(
+            parts[0].joinpath("train"),
+            parts[0].joinpath("train.json"),
+            img_transforms=Compose(
                 [
-                    T.Resize(args.input_size, preserve_aspect_ratio=True),
-                    T.RandomApply(T.RandomRotate(90, expand=True), 0.5),
-                    T.Resize((args.input_size, args.input_size), preserve_aspect_ratio=True, symmetric_pad=True),
+                    T.Resize((args.input_size, 4 * args.input_size), preserve_aspect_ratio=True),
+                    # Augmentations
+                    T.RandomApply(T.ColorInversion(), 0.1),
+                    RandomGrayscale(p=0.1),
+                    # RandomPhotometricDistort(p=0.1),
+                    T.RandomApply(T.RandomShadow(), p=0.4),
+                    T.RandomApply(T.GaussianNoise(mean=0, std=0.1), 0.1),
+                    T.RandomApply(GaussianBlur(3), 0.3),
+                    RandomPerspective(distortion_scale=0.2, p=0.3),
                 ]
-                if args.rotation
-                else []
-            )
-        ),
-        use_polygons=args.rotation,
-    )
+            ),
+        )
+        if len(parts) > 1:
+            for subfolder in parts[1:]:
+                train_set.merge_dataset(
+                    RecognitionDataset(subfolder.joinpath("train"), subfolder.joinpath("train.json"))
+                )
+    else:
+        train_hash = None
+        # Load synthetic data generator
+        train_set = WordGenerator(
+            vocab=vocab,
+            min_chars=args.min_chars,
+            max_chars=args.max_chars,
+            num_samples=args.train_samples * len(vocab),
+            font_family=fonts,
+            img_transforms=Compose(
+                [
+                    T.Resize((args.input_size, 4 * args.input_size), preserve_aspect_ratio=True),
+                    # Ensure we have a 90% split of white-background images
+                    T.RandomApply(T.ColorInversion(), 0.9),
+                    RandomGrayscale(p=0.1),
+                    # RandomPhotometricDistort(p=0.1),
+                    T.RandomApply(T.RandomShadow(), p=0.4),
+                    T.RandomApply(T.GaussianNoise(mean=0, std=0.1), 0.1),
+                    T.RandomApply(GaussianBlur(3), 0.3),
+                    RandomPerspective(distortion_scale=0.2, p=0.3),
+                ]
+            ),
+        )
 
     train_loader = DataLoader(
         train_set,
@@ -346,18 +381,11 @@ def main(args):
         collate_fn=train_set.collate_fn,
     )
     print(f"Train set loaded in {time.time() - st:.4}s ({len(train_set)} samples in " f"{len(train_loader)} batches)")
-    with open(os.path.join(args.train_path, "labels.json"), "rb") as f:
-        train_hash = hashlib.sha256(f.read()).hexdigest()
 
     if args.show_samples:
         x, target = next(iter(train_loader))
         plot_samples(x, target)
         return
-
-    # Backbone freezing
-    if args.freeze_backbone:
-        for p in model.feat_extractor.parameters():
-            p.requires_grad = False
 
     # Optimizer
     optimizer = torch.optim.Adam(
@@ -386,7 +414,7 @@ def main(args):
     if args.wb:
         run = wandb.init(
             name=exp_name,
-            project="text-detection",
+            project="text-recognition",
             config={
                 "learning_rate": args.lr,
                 "epochs": args.epochs,
@@ -397,41 +425,39 @@ def main(args):
                 "optimizer": "adam",
                 "framework": "pytorch",
                 "scheduler": args.sched,
+                "vocab": args.vocab,
                 "train_hash": train_hash,
                 "val_hash": val_hash,
                 "pretrained": args.pretrained,
-                "rotation": args.rotation,
-                "amp": args.amp,
             },
         )
 
     # Create loss queue
     min_loss = np.inf
-
     # Training loop
     mb = master_bar(range(args.epochs))
     for epoch in mb:
         fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, mb, amp=args.amp)
+
         # Validation loop at the end of each epoch
-        val_loss, recall, precision, mean_iou = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
+        val_loss, exact_match, partial_match = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
         if val_loss < min_loss:
             print(f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state...")
-            torch.save(model.state_dict(), f"./{exp_name}.pt")
+            if not os.path.exists("./../models/"):
+                os.makedirs("./../models/")
+            torch.save(model.state_dict(), f"./../models/{exp_name}.pt")
             min_loss = val_loss
-        log_msg = f"Epoch {epoch + 1}/{args.epochs} - Validation loss: {val_loss:.6} "
-        if any(val is None for val in (recall, precision, mean_iou)):
-            log_msg += "(Undefined metric value, caused by empty GTs or predictions)"
-        else:
-            log_msg += f"(Recall: {recall:.2%} | Precision: {precision:.2%} | Mean IoU: {mean_iou:.2%})"
-        mb.write(log_msg)
+        mb.write(
+            f"Epoch {epoch + 1}/{args.epochs} - Validation loss: {val_loss:.6} "
+            f"(Exact: {exact_match:.2%} | Partial: {partial_match:.2%})"
+        )
         # W&B
         if args.wb:
             wandb.log(
                 {
                     "val_loss": val_loss,
-                    "recall": recall,
-                    "precision": precision,
-                    "mean_iou": mean_iou,
+                    "exact_match": exact_match,
+                    "partial_match": partial_match,
                 }
             )
 
@@ -439,33 +465,48 @@ def main(args):
         run.finish()
 
     if args.push_to_hub:
-        push_to_hf_hub(model, exp_name, task="detection", run_config=args)
+        push_to_hf_hub(model, exp_name, task="recognition", run_config=args)
 
 
 def parse_args():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="DocTR training script for text detection (PyTorch)",
+        description="DocTR training script for text recognition (PyTorch)",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
-    parser.add_argument("train_path", type=str, help="path to training data folder")
-    parser.add_argument("val_path", type=str, help="path to validation data folder")
-    parser.add_argument("arch", type=str, help="text-detection model to train")
+    parser.add_argument("arch", type=str, help="text-recognition model to train")
+    parser.add_argument("--train_path", type=str, default=None, help="path to train data folder(s)")
+    parser.add_argument(
+        "--train-samples",
+        type=int,
+        default=1000,
+        help="Multiplied by the vocab length gets you the number of synthetic training samples that will be used.",
+    )
+    parser.add_argument(
+        "--val-samples",
+        type=int,
+        default=20,
+        help="Multiplied by the vocab length gets you the number of synthetic validation samples that will be used.",
+    )
+    parser.add_argument(
+        "--font", type=str, default="FreeMono.ttf,FreeSans.ttf,FreeSerif.ttf", help="Font family to be used"
+    )
+    parser.add_argument("--out_file", type=str, default=None, help="Minimum number of characters per synthetic sample")
+    parser.add_argument("--min-chars", type=int, default=1, help="Minimum number of characters per synthetic sample")
+    parser.add_argument("--max-chars", type=int, default=12, help="Maximum number of characters per synthetic sample")
     parser.add_argument("--name", type=str, default=None, help="Name of your training experiment")
     parser.add_argument("--epochs", type=int, default=10, help="number of epochs to train the model on")
-    parser.add_argument("-b", "--batch_size", type=int, default=2, help="batch size for training")
+    parser.add_argument("-b", "--batch_size", type=int, default=64, help="batch size for training")
     parser.add_argument("--device", default=None, type=int, help="device")
-    parser.add_argument("--input_size", type=int, default=1024, help="model input size, H = W")
+    parser.add_argument("--input_size", type=int, default=32, help="input size H for the model, W = 4*H")
     parser.add_argument("--lr", type=float, default=0.001, help="learning rate for the optimizer (Adam)")
     parser.add_argument("--wd", "--weight-decay", default=0, type=float, help="weight decay", dest="weight_decay")
     parser.add_argument("-j", "--workers", type=int, default=None, help="number of workers used for dataloading")
     parser.add_argument("--resume", type=str, default=None, help="Path to your checkpoint")
+    parser.add_argument("--vocab", type=str, default="french", help="Vocab to be used for training")
     parser.add_argument("--test-only", dest="test_only", action="store_true", help="Run the validation loop")
-    parser.add_argument(
-        "--freeze-backbone", dest="freeze_backbone", action="store_true", help="freeze model backbone for fine-tuning"
-    )
     parser.add_argument(
         "--show-samples", dest="show_samples", action="store_true", help="Display unormalized training samples"
     )
@@ -476,12 +517,6 @@ def parse_args():
         dest="pretrained",
         action="store_true",
         help="Load pretrained parameters before starting the training",
-    )
-    parser.add_argument("--rotation", dest="rotation", action="store_true", help="train with rotated documents")
-    parser.add_argument(
-        "--eval-straight",
-        action="store_true",
-        help="metrics evaluation with straight boxes instead of polygons to save time + memory",
     )
     parser.add_argument("--sched", type=str, default="cosine", help="scheduler to use")
     parser.add_argument("--amp", dest="amp", help="Use Automatic Mixed Precision", action="store_true")

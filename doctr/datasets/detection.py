@@ -61,7 +61,7 @@ class DetectionDataset(AbstractDataset):
 
             geoms, polygons_classes = self.format_polygons(label["polygons"], use_polygons, np_dtype)
 
-            self.data.append((img_name, (np.asarray(geoms, dtype=np_dtype), polygons_classes)))
+            self.data.append((img_name, (np.asarray(geoms, dtype=np_dtype), polygons_classes), img_name))
 
     def format_polygons(
         self, polygons: Union[List, Dict], use_polygons: bool, np_dtype: Type

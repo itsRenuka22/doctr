@@ -4,6 +4,9 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import os
+import pickle
+import warnings
+warnings.filterwarnings('ignore')
 
 os.environ["USE_TORCH"] = "1"
 
@@ -163,7 +166,7 @@ def evaluate_test(model, val_loader, batch_transforms, val_metric, amp=False):
                 val_metric.update(gts=boxes_gt, preds=boxes_pred[:, :4])
 
         df = pd.DataFrame(loc_preds[0]['words'], columns=['x0','y0','x1','y1','rot'])
-        df.to_csv(f'./../results/pred/{name[0][:-4]}.csv', index=False)
+        df.to_csv(f'./../results/pred/{name[0]}.csv', index=False)
         val_loss += out["loss"].item()
         batch_cnt += 1
         
@@ -233,7 +236,7 @@ def main(args):
             + (
                 [
                     T.Resize(args.input_size, preserve_aspect_ratio=True),  # This does not pad
-                    T.RandomApply(T.RandomRotate(90, expand=True), 0.5),
+                    T.RandomRotate(90, expand=True),
                     T.Resize((args.input_size, args.input_size), preserve_aspect_ratio=True, symmetric_pad=True),
                 ]
                 if args.rotation and not args.eval_straight
@@ -326,7 +329,7 @@ def main(args):
             + (
                 [
                     T.Resize(args.input_size, preserve_aspect_ratio=True),
-                    T.RandomApply(T.RandomRotate(90, expand=True), 0.5),
+                    T.RandomRotate(90, expand=True),
                     T.Resize((args.input_size, args.input_size), preserve_aspect_ratio=True, symmetric_pad=True),
                 ]
                 if args.rotation
@@ -357,7 +360,7 @@ def main(args):
     # Backbone freezing
     if args.freeze_backbone:
         for p in model.feat_extractor.parameters():
-            p.requires_grad = False
+            p.reguires_grad_(False)
 
     # Optimizer
     optimizer = torch.optim.Adam(

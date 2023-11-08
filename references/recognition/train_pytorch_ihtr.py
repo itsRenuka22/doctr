@@ -32,6 +32,7 @@ from torchvision.transforms.v2 import (
     RandomPhotometricDistort,
 )
 
+from tensorboardX import SummaryWriter
 from doctr import transforms as T
 from doctr.datasets import VOCABS, RecognitionDataset, WordGenerator
 from doctr.models import login_to_hub, push_to_hf_hub, recognition
@@ -175,11 +176,13 @@ def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
 
     val_loss /= batch_cnt
     result = val_metric.summary()
-    return val_loss, result["raw"], result["unicase"]
+    return val_loss, result["raw"], result["unicase"], result["cer"]
 
 
 def main(args):
     print(args)
+    if(args.save_logs):
+        writer = SummaryWriter("logs")
 
     if args.push_to_hub:
         login_to_hub()
@@ -263,8 +266,8 @@ def main(args):
 
     if args.test_only:
         print("Running evaluation")
-        val_loss, exact_match, partial_match = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
-        print(f"Validation loss: {val_loss:.6} (Exact: {exact_match:.2%} | Partial: {partial_match:.2%})")
+        val_loss, exact_match, partial_match, cer = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
+        print(f"Validation loss: {val_loss:.6} (Exact: {exact_match:.2%} | Partial: {partial_match:.2%}) | CER: {cer})")
         return
 
     st = time.time()
@@ -365,6 +368,7 @@ def main(args):
     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     exp_name = f"{args.arch}_{current_time}" if args.name is None else args.name
 
+    writer.close()
     # W&B
     if args.wb:
         run = wandb.init(
@@ -395,7 +399,14 @@ def main(args):
         fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, mb, amp=args.amp)
 
         # Validation loop at the end of each epoch
-        val_loss, exact_match, partial_match = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
+        val_loss, exact_match, partial_match, cer = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
+        
+        if((args.save_logs==1) and (epoch%args.save_logs_frequency==0)):
+            writer.add_scalar("validation/loss", val_loss, epoch)
+            writer.add_scalar("validation/exact-match", exact_match, epoch)
+            writer.add_scalar("validation/partial-match", partial_match, epoch)
+            writer.add_scalar("validation/cer", cer, epoch)
+        
         if val_loss < min_loss:
             print(f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state...")
             if not os.path.exists("./../models/"):
@@ -452,6 +463,8 @@ def parse_args():
     parser.add_argument("--max-chars", type=int, default=12, help="Maximum number of characters per synthetic sample")
     parser.add_argument("--name", type=str, default=None, help="Name of your training experiment")
     parser.add_argument("--epochs", type=int, default=10, help="number of epochs to train the model on")
+    parser.add_argument("--save_logs", type=int, default=0, help="1 to save logs; 0 to not save logs using tensorboard")
+    parser.add_argument("--save_logs_frequency", type=int, default=50, help="frequency at which to save logs using tensorboard")
     parser.add_argument("-b", "--batch_size", type=int, default=64, help="batch size for training")
     parser.add_argument("--device", default=None, type=int, help="device")
     parser.add_argument("--input_size", type=int, default=32, help="input size H for the model, W = 4*H")
