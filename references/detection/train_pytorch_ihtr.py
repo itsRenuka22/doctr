@@ -139,7 +139,7 @@ def fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, m
 
 
 @torch.no_grad()
-def evaluate_test(model, val_loader, batch_transforms, val_metric, amp=False):
+def evaluate_test(model, val_loader, batch_transforms, val_metric, folder_name, amp=False):
     # Model in eval mode
     model.eval()
     # Reset val metric
@@ -166,7 +166,7 @@ def evaluate_test(model, val_loader, batch_transforms, val_metric, amp=False):
                 val_metric.update(gts=boxes_gt, preds=boxes_pred[:, :4])
 
         df = pd.DataFrame(loc_preds[0]['words'], columns=['x0','y0','x1','y1','rot'])
-        df.to_csv(f'./../results/pred/{name[0]}.csv', index=False)
+        df.to_csv(f'./../results/{folder_name}/{name[0]}.csv', index=False)
         val_loss += out["loss"].item()
         batch_cnt += 1
         
@@ -297,7 +297,7 @@ def main(args):
 
     if args.test_only:
         print("Running evaluation")
-        val_loss, recall, precision, mean_iou = evaluate_test(model, val_loader, batch_transforms, val_metric, amp=args.amp)
+        val_loss, recall, precision, mean_iou = evaluate_test(model, val_loader, batch_transforms, val_metric, args.name, amp=args.amp)
         print(
             f"Validation loss: {val_loss:.6} (Recall: {recall:.2%} | Precision: {precision:.2%} | "
             f"Mean IoU: {mean_iou:.2%})"
