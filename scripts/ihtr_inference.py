@@ -18,7 +18,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def get_result(args):
-    doc = DocumentFile.from_pdf(args.input_file)
+    doc = DocumentFile.from_images(args.input_file)
 
     # Detection model
     det_model = db_resnet50(pretrained=True)
