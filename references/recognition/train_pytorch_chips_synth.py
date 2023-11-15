@@ -4,10 +4,8 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import os
-import fastwer
-import pandas as pd
+
 import warnings
-from tqdm import tqdm
 warnings.filterwarnings("ignore")
 
 os.environ["USE_TORCH"] = "1"
@@ -34,6 +32,7 @@ from torchvision.transforms import (
     # RandomPhotometricDistort,
 )
 
+from tensorboardX import SummaryWriter
 from doctr import transforms as T
 from doctr.datasets import VOCABS, RecognitionDataset, WordGenerator
 from doctr.models import login_to_hub, push_to_hf_hub, recognition
@@ -119,7 +118,7 @@ def fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, m
 
     model.train()
     # Iterate over the batches of the dataset
-    for images, targets in progress_bar(train_loader, parent=mb):
+    for images, targets, name in progress_bar(train_loader, parent=mb):
         if torch.cuda.is_available():
             images = images.cuda()
         images = batch_transforms(images)
@@ -149,52 +148,6 @@ def fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, m
 
 
 @torch.no_grad()
-def evaluate_test(model, val_loader, batch_transforms, val_metric, out_file, amp=False):
-    # Model in eval mode
-    model.eval()
-    # Reset val metric
-    val_metric.reset()
-    # Validation loop
-    val_loss, batch_cnt = 0, 0
-    preds, actual,names = [], [], []
-    for images, targets, name in tqdm(val_loader):
-        if torch.cuda.is_available():
-            images = images.cuda()
-        images = batch_transforms(images)
-        if amp:
-            with torch.cuda.amp.autocast():
-                out = model(images, targets, return_preds=True)
-        else:
-            out = model(images, targets, return_preds=True)
-        # Compute metric
-        if len(out["preds"]):
-            words, _ = zip(*out["preds"])
-        else:
-            words = []
-        val_metric.update(targets, words)
-        
-        preds.append(words[0])
-        actual.append(targets[0])
-        names.append(name[0])
-
-        val_loss += out["loss"].item()
-        batch_cnt += 1
-
-
-    crr = 0
-    wrr = 0
-    cer = fastwer.score(preds, actual, char_level=True)
-    wer = fastwer.score(preds, actual)
-    print(100- cer, 100-wer, sep=',')
-    df = pd.DataFrame(list(zip(names,preds, actual)), columns=['name','pred', 'actual'])
-    # print(df)
-    df.to_csv('./../results/' + out_file + '.txt', sep=' ', index=False, header=False)
-    val_loss /= batch_cnt
-    result = val_metric.summary()
-    return val_loss, result["raw"], result["unicase"]
-
-
-@torch.no_grad()
 def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
     # Model in eval mode
     model.eval()
@@ -202,7 +155,7 @@ def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
     val_metric.reset()
     # Validation loop
     val_loss, batch_cnt = 0, 0
-    for images, targets in val_loader:
+    for images, targets, name in val_loader:
         if torch.cuda.is_available():
             images = images.cuda()
         images = batch_transforms(images)
@@ -223,11 +176,13 @@ def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
 
     val_loss /= batch_cnt
     result = val_metric.summary()
-    return val_loss, result["raw"], result["unicase"]
+    return val_loss, result["raw"], result["unicase"], result["cer"]
 
 
 def main(args):
-    # print(args)
+    print(args)
+    if(args.save_logs):
+        writer = SummaryWriter("logs")
 
     if args.push_to_hub:
         login_to_hub()
@@ -243,12 +198,12 @@ def main(args):
     # Load val data generator
     st = time.time()
     if isinstance(args.train_path, str):
-        with open(os.path.join(args.train_path, "test.json"), "rb") as f:
+        with open(os.path.join(args.train_path, "val.json"), "rb") as f:
             val_hash = hashlib.sha256(f.read()).hexdigest()
 
         val_set = RecognitionDataset(
-            img_folder=os.path.join(args.train_path, "test/"),
-            labels_path=os.path.join(args.train_path, "test.json"),
+            img_folder=os.path.join(args.train_path, "images/"),
+            labels_path=os.path.join(args.train_path, "val.json"),
             img_transforms=T.Resize((args.input_size, 4 * args.input_size), preserve_aspect_ratio=True),
         )
     else:
@@ -278,7 +233,7 @@ def main(args):
         pin_memory=torch.cuda.is_available(),
         collate_fn=val_set.collate_fn,
     )
-    # print(f"Validation set loaded in {time.time() - st:.4}s ({len(val_set)} samples in " f"{len(val_loader)} batches)")
+    print(f"Validation set loaded in {time.time() - st:.4}s ({len(val_set)} samples in " f"{len(val_loader)} batches)")
 
     batch_transforms = Normalize(mean=(0.694, 0.695, 0.693), std=(0.299, 0.296, 0.301))
 
@@ -287,7 +242,7 @@ def main(args):
 
     # Resume weights
     if isinstance(args.resume, str):
-        # print(f"Resuming {args.resume}")
+        print(f"Resuming {args.resume}")
         checkpoint = torch.load(args.resume, map_location="cpu")
         model.load_state_dict(checkpoint)
 
@@ -310,9 +265,9 @@ def main(args):
     val_metric = TextMatch()
 
     if args.test_only:
-        # print("Running evaluation")
-        val_loss, exact_match, partial_match = evaluate_test(model, val_loader, batch_transforms, val_metric, args.out_file, amp=args.amp)
-        print(f"Validation loss: {val_loss:.6} (Exact: {exact_match:.2%} | Partial: {partial_match:.2%})")
+        print("Running evaluation")
+        val_loss, exact_match, partial_match, cer = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
+        print(f"Validation loss: {val_loss:.6} (Exact: {exact_match:.2%} | Partial: {partial_match:.2%}) | CER: {cer})")
         return
 
     st = time.time()
@@ -329,7 +284,7 @@ def main(args):
             train_hash = hashlib.sha256(f.read()).hexdigest()
 
         train_set = RecognitionDataset(
-            parts[0].joinpath("train"),
+            parts[0].joinpath("images"),
             parts[0].joinpath("train.json"),
             img_transforms=Compose(
                 [
@@ -348,7 +303,7 @@ def main(args):
         if len(parts) > 1:
             for subfolder in parts[1:]:
                 train_set.merge_dataset(
-                    RecognitionDataset(subfolder.joinpath("train"), subfolder.joinpath("train.json"))
+                    RecognitionDataset(subfolder.joinpath("images"), subfolder.joinpath("train.json"))
                 )
     else:
         train_hash = None
@@ -413,6 +368,8 @@ def main(args):
     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     exp_name = f"{args.arch}_{current_time}" if args.name is None else args.name
 
+    if(args.save_logs):
+        writer.close()
     # W&B
     if args.wb:
         run = wandb.init(
@@ -443,7 +400,14 @@ def main(args):
         fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, mb, amp=args.amp)
 
         # Validation loop at the end of each epoch
-        val_loss, exact_match, partial_match = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
+        val_loss, exact_match, partial_match, cer = evaluate(model, val_loader, batch_transforms, val_metric, amp=args.amp)
+        
+        if((args.save_logs==1) and (epoch%args.save_logs_frequency==0)):
+            writer.add_scalar("validation/loss", val_loss, epoch)
+            writer.add_scalar("validation/exact-match", exact_match, epoch)
+            writer.add_scalar("validation/partial-match", partial_match, epoch)
+            writer.add_scalar("validation/cer", cer, epoch)
+        
         if val_loss < min_loss:
             print(f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state...")
             if not os.path.exists("./../models/"):
@@ -496,11 +460,12 @@ def parse_args():
     parser.add_argument(
         "--font", type=str, default="FreeMono.ttf,FreeSans.ttf,FreeSerif.ttf", help="Font family to be used"
     )
-    parser.add_argument("--out_file", type=str, default=None, help="Minimum number of characters per synthetic sample")
     parser.add_argument("--min-chars", type=int, default=1, help="Minimum number of characters per synthetic sample")
     parser.add_argument("--max-chars", type=int, default=12, help="Maximum number of characters per synthetic sample")
     parser.add_argument("--name", type=str, default=None, help="Name of your training experiment")
     parser.add_argument("--epochs", type=int, default=10, help="number of epochs to train the model on")
+    parser.add_argument("--save_logs", type=int, default=0, help="1 to save logs; 0 to not save logs using tensorboard")
+    parser.add_argument("--save_logs_frequency", type=int, default=50, help="frequency at which to save logs using tensorboard")
     parser.add_argument("-b", "--batch_size", type=int, default=64, help="batch size for training")
     parser.add_argument("--device", default=None, type=int, help="device")
     parser.add_argument("--input_size", type=int, default=32, help="input size H for the model, W = 4*H")

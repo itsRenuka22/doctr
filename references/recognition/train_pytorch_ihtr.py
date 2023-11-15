@@ -23,13 +23,13 @@ import wandb
 from fastprogress.fastprogress import master_bar, progress_bar
 from torch.optim.lr_scheduler import CosineAnnealingLR, MultiplicativeLR, OneCycleLR
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
-from torchvision.transforms.v2 import (
+from torchvision.transforms import (
     Compose,
     GaussianBlur,
     Normalize,
     RandomGrayscale,
     RandomPerspective,
-    RandomPhotometricDistort,
+    # RandomPhotometricDistort,
 )
 
 from tensorboardX import SummaryWriter
@@ -118,7 +118,7 @@ def fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, m
 
     model.train()
     # Iterate over the batches of the dataset
-    for images, targets in progress_bar(train_loader, parent=mb):
+    for images, targets, name in progress_bar(train_loader, parent=mb):
         if torch.cuda.is_available():
             images = images.cuda()
         images = batch_transforms(images)
@@ -155,7 +155,7 @@ def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
     val_metric.reset()
     # Validation loop
     val_loss, batch_cnt = 0, 0
-    for images, targets in val_loader:
+    for images, targets, name in val_loader:
         if torch.cuda.is_available():
             images = images.cuda()
         images = batch_transforms(images)
@@ -292,7 +292,7 @@ def main(args):
                     # Augmentations
                     T.RandomApply(T.ColorInversion(), 0.1),
                     RandomGrayscale(p=0.1),
-                    RandomPhotometricDistort(p=0.1),
+                    # RandomPhotometricDistort(p=0.1),
                     T.RandomApply(T.RandomShadow(), p=0.4),
                     T.RandomApply(T.GaussianNoise(mean=0, std=0.1), 0.1),
                     T.RandomApply(GaussianBlur(3), 0.3),
@@ -320,7 +320,7 @@ def main(args):
                     # Ensure we have a 90% split of white-background images
                     T.RandomApply(T.ColorInversion(), 0.9),
                     RandomGrayscale(p=0.1),
-                    RandomPhotometricDistort(p=0.1),
+                    # RandomPhotometricDistort(p=0.1),
                     T.RandomApply(T.RandomShadow(), p=0.4),
                     T.RandomApply(T.GaussianNoise(mean=0, std=0.1), 0.1),
                     T.RandomApply(GaussianBlur(3), 0.3),
@@ -368,7 +368,8 @@ def main(args):
     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     exp_name = f"{args.arch}_{current_time}" if args.name is None else args.name
 
-    writer.close()
+    if(args.save_logs):
+        writer.close()
     # W&B
     if args.wb:
         run = wandb.init(
