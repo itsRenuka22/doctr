@@ -35,10 +35,15 @@
 # Training Details
 
 ```
-python references/recognition/train_pytorch_ihtr.py crnn_vgg16_bn --train_path DATA_DIR --epochs 10 -b 1024 --vocab VOCAB --device 0
+python references/recognition/train_pytorch_ihtr.py crnn_vgg16_bn --train_path DATA_DIR --epochs 10 -b 1024 --vocab VOCAB --device 0 --font PATH_TO_THE_FONT_FILES
 ```
 
 The resulting models is saved in *models* dir outside the main repository
+
+### Sample Train Command for Sanskrit Diacritics
+```
+python references/recognition/train_pytorch.py master --train-samples 10000 --epochs 10 --vocab sanskrit_diacritics_training --font Carlito-Regular.ttf,CharisSIL-R.ttf,DejaVuSans.ttf,NotoSans-Regular.ttf,Cardo104s.ttf,EBGaramond12-Regular.otf,Lato-Regular.ttf,Quicksand-Regular.ttf
+```
 
 
 # Inference Details
