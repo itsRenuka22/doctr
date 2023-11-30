@@ -44,7 +44,7 @@ The resulting models is saved in *models* dir outside the main repository
 ```
 python references/recognition/train_pytorch.py master --train-samples 10000 --epochs 10 --vocab sanskrit_diacritics_training --font Carlito-Regular.ttf,CharisSIL-R.ttf,DejaVuSans.ttf,NotoSans-Regular.ttf,Cardo104s.ttf,EBGaramond12-Regular.otf,Lato-Regular.ttf,Quicksand-Regular.ttf
 ```
-
+`Note` : Required `fonts` are added in the root directory which are Carlito-Regular.ttf,CharisSIL-R.ttf,DejaVuSans.ttf,NotoSans-Regular.ttf,Cardo104s.ttf,EBGaramond12-Regular.otf,Lato-Regular.ttf,Quicksand-Regular.ttf and the vocabs of `sanskrit_diacritics_training` in /doctr/datasets/vocabs.py
 
 # Inference Details
 

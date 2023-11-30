@@ -20,8 +20,8 @@ VOCABS: Dict[str, str] = {
     "hindi_digits": "٠١٢٣٤٥٦٧٨٩",
     "arabic_diacritics": "ًٌٍَُِّْ",
     "arabic_punctuation": "؟؛«»—",
-    "sanskrit_transliterated": "'(-0123456789:A[abcdeghijklmnoprstuvy|ñāēīōśū̥̄̐।॥ḍḥṁṃṅṇṛṣṭ", #.\u200c\u200d",
-    "sanskrit_transliterated_refined": "ÑñĀāēĪīōŚśŪū˜ḌḍḤḥḶḷḸḹḺḻṁṂṃṄṅṆḷṚṛṜṝṢṣṬṭ" #।॥ Removing dhanda and double dhanda since font rendition is not proper.
+    "sanskrit_transliterated": "'(-0123456789:A[abcdeghijklmnoprstuvy|ñāēīōśū̥̄̐।॥ḍḥṁṃṅṇṛṣṭ",
+    "sanskrit_transliterated_refined": "ÑñĀāēĪīōŚśŪū˜ḌḍḤḥḶḷḸḹḺḻṁṂṃṄṅṆḷṚṛṜṝṢṣṬṭ"
 }
 
 VOCABS["latin"] = VOCABS["digits"] + VOCABS["ascii_letters"] + VOCABS["punctuation"]
