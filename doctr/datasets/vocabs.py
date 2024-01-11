@@ -69,3 +69,5 @@ VOCABS["multilingual"] = "".join(
         + "§"
     )
 )
+
+VOCABS['table'] = 'EFNLXU'
