@@ -191,20 +191,16 @@ def main(args):
     vocab = VOCABS[args.vocab]
     fonts = args.font.split(",")
     
-    if(args.transpose):
-        json_file = '.json' 
-    else:
-        json_file = '_transposed.json'
 
     # Load val data generator
     st = time.time()
     if isinstance(args.data_path, str):
-        with open(os.path.join(args.data_path, "val" + json_file), "rb") as f:
+        with open(os.path.join(args.data_path, "val.json"), "rb") as f:
             val_hash = hashlib.sha256(f.read()).hexdigest()
 
         val_set = RecognitionDataset(
             img_folder=os.path.join(args.data_path, "val"),
-            labels_path=os.path.join(args.data_path, "val" + json_file),
+            labels_path=os.path.join(args.data_path, "val.json"),
             img_transforms=T.Resize((args.input_size, 4 * args.input_size), preserve_aspect_ratio=True),
         )
     else:
@@ -240,6 +236,9 @@ def main(args):
 
     # Load doctr model
     model = recognition.__dict__[args.arch](pretrained=args.pretrained, vocab=vocab)
+    
+    total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Total number of trainable parameters: {total_params}")
 
     # Resume weights
     if isinstance(args.resume, str):
@@ -278,15 +277,15 @@ def main(args):
         base_path = Path(args.data_path)
         parts = (
             [base_path]
-            if base_path.joinpath("train" + json_file).is_file()
+            if base_path.joinpath("train.json").is_file()
             else [base_path.joinpath(sub) for sub in os.listdir(base_path)]
         )
-        with open(parts[0].joinpath("train" + json_file), "rb") as f:
+        with open(parts[0].joinpath("train.json"), "rb") as f:
             train_hash = hashlib.sha256(f.read()).hexdigest()
 
         train_set = RecognitionDataset(
             parts[0].joinpath("train"),
-            parts[0].joinpath("train" + json_file),
+            parts[0].joinpath("train.json"),
             img_transforms=Compose(
                 [
                     T.Resize((args.input_size, 4 * args.input_size), preserve_aspect_ratio=True),
@@ -304,7 +303,7 @@ def main(args):
         if len(parts) > 1:
             for subfolder in parts[1:]:
                 train_set.merge_dataset(
-                    RecognitionDataset(subfolder.joinpath("train"), subfolder.joinpath("train" + json_file))
+                    RecognitionDataset(subfolder.joinpath("train"), subfolder.joinpath("train.json"))
                 )
     else:
         train_hash = None
@@ -446,7 +445,6 @@ def parse_args():
 
     parser.add_argument("arch", type=str, help="text-recognition model to train")
     parser.add_argument("--data_path", type=str, default=None, help="path to train data folder(s)")
-    parser.add_argument("--transpose", action="store_true", help="Transpose of the matrix")
     parser.add_argument("--train_path", type=str, default=None, help="path to train data folder(s)")
     parser.add_argument("--val_path", type=str, default=None, help="path to val data folder")
     parser.add_argument(
