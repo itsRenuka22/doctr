@@ -138,3 +138,7 @@ wandb/
 *.pt
 *.pb
 *.index
+
+# Models and data
+data/
+fonts/

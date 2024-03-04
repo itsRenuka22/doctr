@@ -17,13 +17,35 @@
 ## Dataset Creation/Usage
 
 
-### IndicCorp Dataset
+### Tamil Text Corpus
 
-1. Download data for the required language from here - [link](https://paperswithcode.com/dataset/indiccorp)
-2. Run the ```code files present in misc_code folder accordingly``` step-by-step according to the suggested execution procedure
-3. Download the ```Fonts folder``` required to pass as parameter while training from this - [link](https://iitbacin-my.sharepoint.com/:f:/g/personal/22m2119_iitb_ac_in/EtLuy1XMETJPl77rlw3IxJoBZsmPR5wG6DYqOXyuxwCEPQ?e=0X3hPs)
-4. Copy the Vocab and create a new dictionary element for the new vocab set in the ```doctr/datasets/vocabs.py``` file accordingly as the result from the execution of misc_code folder files 
+1. Download the data using the command
+```sh
+curl https://objectstore.e2enetworks.net/ai4b-public-nlu-nlg/v1-indiccorp/ta.txt >> ta.txt
+``` 
+2. Specify the vocabulary as a dictonary element in ```doctr/datasets/vocabs.py```
 
+3. Run the preprocess code in preprocess.py to generate dataset of valid words from the text file.
+
+```sh
+python misc_code/preprocess.py --input_path data/corpus/ta.txt --output_path data/trial --vocab tamil --sample 0.5 --unique --continue_check
+```
+
+4. Download the fonts from [here](https://github.com/iitb-research-code/indic-fonts/tree/main/tamil) whose directory path must be passed during training
+
+## Changes Made
+
+1) Included preprocess.py [Preprocess data], infer.py [To make inference], analyse.py[To get character counts in data]
+
+2) In references/train_pytorch made finding text length general to all os (previously only for linux)
+
+3) In doctr/utils/fonts.py added support for RAQM layout engine (needed for tamil)
+
+4) In doctr/datasets/generator/base.py modified synthesize_text_img function to use RAQM layout engine and made the images centered with padding provided as pixels. 
+
+    The old one provided inconistent placing of text - It was not intensional - It was random inconsistency due to font property - Some fonts where always overflowing the image boundaries more than 80%, some fonts where always perfectly fit
+    
+    Rather than having the random offest due to font's property it would be better to have a centered image for every font and then randomly offset it (yet to be implemented) so that he offset doesnt overfit to font style.
 
 ## Training Details
 
@@ -31,5 +53,5 @@
 python references/recognition/train_pytorch.py crnn_vgg16_bn --train_txt_path TRAIN_TXT_PATH --val_txt_path VAL_TXT_PATH --vocab VOCAB_NAME --name NAME_OF_EXP --epochs 10 --font FONTS_PATH
 ```
 
-The resulting models is saved in *models* dir outside the main repository
+The resulting models is saved in *models* dir in the repository (ensure the directory is is actually present)
 

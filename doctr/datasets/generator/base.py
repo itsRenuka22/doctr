@@ -1,8 +1,3 @@
-# Copyright (C) 2021-2023, Mindee.
-
-# This program is licensed under the Apache License 2.0.
-# See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
-
 import random
 from typing import Any, Callable, List, Optional, Tuple, Union
 
@@ -19,6 +14,7 @@ def synthesize_text_img(
     font_family: Optional[str] = None,
     background_color: Optional[Tuple[int, int, int]] = None,
     text_color: Optional[Tuple[int, int, int]] = None,
+    padding: int = 5
 ) -> Image:
     """Generate a synthetic text image
 
@@ -28,6 +24,7 @@ def synthesize_text_img(
         font_family: the font family (has to be installed on your system)
         background_color: background color of the final image
         text_color: text color on the final image
+        padding: padding of blank space around the word in image
 
     Returns:
         PIL image of the text
@@ -36,11 +33,12 @@ def synthesize_text_img(
     background_color = (0, 0, 0) if background_color is None else background_color
     text_color = (255, 255, 255) if text_color is None else text_color
 
-    font = get_font(font_family, font_size)
-    # left, top, right, bottom = font.getbbox(text)
-    # text_w, text_h = right - left, bottom - top
-    text_w, text_h = font.getsize(text)
-    h, w = int(round(1.3 * text_h)), int(round(1.1 * text_w))
+    font = get_font(font_family, font_size, layout_engine= "raqm")
+    left, top, right, bottom = font.getbbox(text)
+    text_w, text_h = right - left, bottom - top
+    # text_w, text_h = font.getsize(text)
+
+    h, w = text_h + padding * 2, text_w + padding * 2
     # If single letter, make the image square, otherwise expand to meet the text size
     img_size = (h, w) if len(text) > 1 else (max(h, w), max(h, w))
 
@@ -48,13 +46,14 @@ def synthesize_text_img(
     d = ImageDraw.Draw(img)
 
     # Offset so that the text is centered
-    text_pos = (int(round((img_size[1] - text_w) / 2)), int(round((img_size[0] - text_h) / 2)))
+    # text_pos = (int(round((img_size[1] - text_w) / 2)), int(round((img_size[0] - text_h) / 2)))
+    text_pos = (-left + padding, -top + padding)
     # Draw the text
     d.text(text_pos, text, font=font, fill=text_color)
     #Save 5 images with little randomisation
-    if random.random()<0.01 and len(os.listdir("samples"))<5:
+    if random.random()<0.5 and len(os.listdir("samples"))<5:
         img.save(f"samples/{text}.jpg")
-        print(f"Saving image {text}.jpg as sample")
+        # print(f"Saving image {text}.jpg as sample")
     return img
 
 
@@ -140,6 +139,7 @@ class _WordGenerator(AbstractDataset):
                 (synthesize_text_img(text, font_family=random.choice(self.font_family)), text) for text in _words
             ]
         self.counter=0       #count number of images generated; for saving appropriate number of samples
+
     def _generate_string(self, min_chars: int, max_chars: int) -> str:
         # num_chars = random.randint(min_chars, max_chars)
         # return "".join(random.choice(self.vocab) for _ in range(num_chars))
@@ -161,7 +161,16 @@ class _WordGenerator(AbstractDataset):
             pil_img, target = self._data[index]
         else:
             target = self._generate_string(*self.wordlen_range)
-            pil_img = synthesize_text_img(target, font_family=random.choice(self.font_family))
+            pil_img = None
+            while not pil_img:
+                font = random.choice(self.font_family)
+                try:
+                    pil_img = synthesize_text_img(target, font_family=font)
+                except:
+                    with open("invalid.txt","a") as f:
+                        f.write("\n"+font)
+                    print(f"Invalid font {font}.. Retrying")
+
         self.counter+=1      #increment counter
         #if counter is divisible by number of samples divided by 5, save the image
         img = tensor_from_pil(pil_img)

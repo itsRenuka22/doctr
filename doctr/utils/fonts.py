@@ -12,7 +12,7 @@ from PIL import ImageFont
 __all__ = ["get_font"]
 
 
-def get_font(font_family: Optional[str] = None, font_size: int = 13) -> ImageFont.ImageFont:
+def get_font(font_family: Optional[str] = None, font_size: int = 13, layout_engine = "basic") -> ImageFont.ImageFont:
     """Resolves a compatible ImageFont for the system
 
     Args:
@@ -22,11 +22,14 @@ def get_font(font_family: Optional[str] = None, font_size: int = 13) -> ImageFon
     Returns:
         the Pillow font
     """
-
+    if layout_engine == "raqm":
+        layout_engine = ImageFont.Layout.RAQM
+    else:
+        layout_engine = ImageFont.Layout.BASIC
     # Font selection
     if font_family is None:
         try:
-            font = ImageFont.truetype("FreeMono.ttf" if platform.system() == "Linux" else "Arial.ttf", font_size)
+            font = ImageFont.truetype("FreeMono.ttf" if platform.system() == "Linux" else "Arial.ttf", font_size, layout_engine= layout_engine)
         except OSError:
             font = ImageFont.load_default()
             logging.warning(

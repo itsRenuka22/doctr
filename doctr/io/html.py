@@ -5,7 +5,7 @@
 
 from typing import Any
 
-from weasyprint import HTML
+# from weasyprint import HTML
 
 __all__ = ["read_html"]
 
@@ -23,4 +23,4 @@ def read_html(url: str, **kwargs: Any) -> bytes:
         decoded PDF file as a bytes stream
     """
 
-    return HTML(url, **kwargs).write_pdf()
+    return None
