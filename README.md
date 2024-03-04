@@ -55,3 +55,7 @@ python references/recognition/train_pytorch.py crnn_vgg16_bn --train_txt_path TR
 
 The resulting models is saved in *models* dir in the repository (ensure the directory is is actually present)
 
+## Vocab - Extra
+
+In the vocab_builder directory there is source vocab for bengali, gujarati, gurumukhi, devnagiri(hindi), kannada, malayalam, oriya and telugu.
+
