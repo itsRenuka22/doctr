@@ -4,7 +4,7 @@ import torch
 import argparse
 
 from doctr.io import DocumentFile
-from doctr.models import crnn_vgg16_bn, db_resnet50
+from doctr.models import crnn_vgg16_bn
 from doctr.models.predictor import OCRPredictor
 from doctr.models.detection.predictor import DetectionPredictor
 from doctr.models.recognition.predictor import RecognitionPredictor
