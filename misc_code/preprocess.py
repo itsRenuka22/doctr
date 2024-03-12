@@ -99,14 +99,24 @@ class PreprocessWordDataset:
             return random.choice([(words,[]),([],words)])
         return train_test_split(words, test_size = test_size, random_state= 24)
     
-    def __call__(self, output_path, test_size = 0.1):
+    def __call__(self, output_path, continue_ptr, test_size = 0.1):
         if not os.path.exists(output_path):
             os.mkdir(output_path)
             
         try:
             infile = open(self.input_file, encoding="utf-8")
-            trainfile = open(os.path.join(output_path,"train.txt"),"w",encoding="utf-8")
-            valfile = open(os.path.join(output_path,"val.txt"),"w",encoding="utf-8")
+            if continue_ptr:
+                infile.seek(continue_ptr)
+                print(f"Resuming from file location {continue_ptr}")
+            
+            mode = "w"
+            if os.path.isfile(os.path.join(output_path,"train.txt")):
+                mode = "a"
+            trainfile = open(os.path.join(output_path,"train.txt"),mode,encoding="utf-8")
+            mode = "w"
+            if os.path.isfile(os.path.join(output_path,"val.txt")):
+                mode = "a"
+            valfile = open(os.path.join(output_path,"val.txt"),mode,encoding="utf-8")
             in_count, train_count, val_count = 0,0,0
             tolerate = 0
             try:
@@ -148,7 +158,10 @@ Val Split: {val_count} words
 
         except Exception as e:
             print("Error Opening the files.")
-            print(e)
+        
+        except KeyboardInterrupt:
+            print("Terminated Preprocessing")
+            print(f"Final file pointer at {infile.tell()}")
         
         finally:
             infile.close()
@@ -161,7 +174,7 @@ def main(args):
     valid_vocab = VOCABS['tamil']
     preprocess = PreprocessWordDataset(args.input_path,valid_vocab)
     # preprocess(args.output_path, sample = args.sample, unique=args.unique, continue_check=args.continue_check)
-    preprocess(args.output_path, args.test_size)
+    preprocess(args.output_path, args.continue_ptr, args.test_size)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Preprocess Data")
@@ -170,6 +183,7 @@ if __name__ == "__main__":
     parser.add_argument("--vocab", type=str, help="vocab key in VOCAB dictionary")
     # parser.add_argument("--sample", type=float, help="Sample value")
     parser.add_argument("--test_size", type=float, help="Validation set split ratio")
+    parser.add_argument("--continue_ptr", type=int, help="File Pointer to continue", default= 0)
     # parser.add_argument("--unique", action="store_true", help="Filter only unique words")
     # parser.add_argument("--continue_check", action="store_true", help="If set then ask before saving the data.")
     args = parser.parse_args()
